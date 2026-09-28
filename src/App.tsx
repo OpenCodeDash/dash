@@ -1,10 +1,10 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
-import { OpenCodeProvider } from 'react-opencode'
-import { OPENCODE_URL } from './server.ts'
-import { ConnectionBanner } from './components/ConnectionBanner.tsx'
-import { Sidebar } from './components/Sidebar.tsx'
-import { Home } from './components/Home.tsx'
-import { SessionView } from './components/SessionView.tsx'
+import { Navigate, Route, Routes } from "react-router-dom";
+import { OpenCodeProvider } from "react-opencode";
+import { OPENCODE_URL } from "./server.ts";
+import { ConnectionBanner } from "./components/ConnectionBanner.tsx";
+import { Sidebar } from "./components/Sidebar.tsx";
+import { Home } from "./components/Home.tsx";
+import { SessionView } from "./components/SessionView.tsx";
 
 export default function App() {
 	return (
@@ -21,5 +21,5 @@ export default function App() {
 				</main>
 			</div>
 		</OpenCodeProvider>
-	)
+	);
 }

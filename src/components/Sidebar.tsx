@@ -1,21 +1,21 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useClientActions, useConnected, useSessions } from 'react-opencode'
-import { SessionItem } from './SessionItem.tsx'
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useClientActions, useConnected, useSessions } from "react-opencode";
+import { SessionItem } from "./SessionItem.tsx";
 
 export function Sidebar() {
-	const sessions = useSessions()
-	const connected = useConnected()
-	const { createSession } = useClientActions()
-	const navigate = useNavigate()
-	const [error, setError] = useState<string | null>(null)
+	const sessions = useSessions();
+	const connected = useConnected();
+	const { createSession } = useClientActions();
+	const navigate = useNavigate();
+	const [error, setError] = useState<string | null>(null);
 
 	return (
 		<aside className="sidebar">
 			<div className="sidebar-header">
 				<span
-					className={`conn-dot ${connected ? 'conn-dot-on' : 'conn-dot-off'}`}
-					title={connected ? 'Connected' : 'Connecting…'}
+					className={`conn-dot ${connected ? "conn-dot-on" : "conn-dot-off"}`}
+					title={connected ? "Connected" : "Connecting…"}
 				/>
 				<span className="sidebar-title">Sessions</span>
 				<button
@@ -39,5 +39,5 @@ export function Sidebar() {
 				{sessions.length === 0 && <div className="session-list-empty">No sessions</div>}
 			</nav>
 		</aside>
-	)
+	);
 }

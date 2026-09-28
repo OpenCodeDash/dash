@@ -1,15 +1,15 @@
-import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
-import { useClientActions, useSessions } from 'react-opencode'
+import { useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { useClientActions, useSessions } from "react-opencode";
 
 export function Home() {
-	const sessions = useSessions()
-	const { createSession } = useClientActions()
-	const navigate = useNavigate()
-	const [error, setError] = useState<string | null>(null)
+	const sessions = useSessions();
+	const { createSession } = useClientActions();
+	const navigate = useNavigate();
+	const [error, setError] = useState<string | null>(null);
 
 	if (sessions.length > 0) {
-		return <Navigate to={`/session/${sessions[0].id}`} replace />
+		return <Navigate to={`/session/${sessions[0].id}`} replace />;
 	}
 
 	return (
@@ -31,5 +31,5 @@ export function Home() {
 				</button>
 			</div>
 		</div>
-	)
+	);
 }

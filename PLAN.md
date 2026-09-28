@@ -12,10 +12,10 @@
 
 ## Routes
 
-| Route             | View                                                        |
-| ----------------- | ----------------------------------------------------------- |
-| `/`               | Session list (redirects to latest session if any)           |
-| `/session/:sessionId` | Chat view                                                |
+| Route                 | View                                              |
+| --------------------- | ------------------------------------------------- |
+| `/`                   | Session list (redirects to latest session if any) |
+| `/session/:sessionId` | Chat view                                         |
 
 **Layout**: left sidebar (connection indicator, "New session", live session list with title + busy status) · main chat column (messages → composer) · right panel toggles: Todos / File changes.
 

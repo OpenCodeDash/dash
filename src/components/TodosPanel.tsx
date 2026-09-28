@@ -1,14 +1,14 @@
-import { useTodos, type Todo } from 'react-opencode'
+import { useTodos, type Todo } from "react-opencode";
 
-const STATUS_ICON: Record<Todo['status'], string> = {
-	pending: '○',
-	in_progress: '◐',
-	completed: '●',
-	cancelled: '✕',
-}
+const STATUS_ICON: Record<Todo["status"], string> = {
+	pending: "○",
+	in_progress: "◐",
+	completed: "●",
+	cancelled: "✕",
+};
 
 export function TodosPanel({ sessionId }: { sessionId: string }) {
-	const todos = useTodos(sessionId)
+	const todos = useTodos(sessionId);
 
 	return (
 		<aside className="panel">
@@ -27,5 +27,5 @@ export function TodosPanel({ sessionId }: { sessionId: string }) {
 				</ul>
 			)}
 		</aside>
-	)
+	);
 }

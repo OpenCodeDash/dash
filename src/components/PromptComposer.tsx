@@ -1,45 +1,45 @@
-import { useMemo, useState } from 'react'
-import { useAgents, usePrompt, useProviders } from 'react-opencode'
+import { useMemo, useState } from "react";
+import { useAgents, usePrompt, useProviders } from "react-opencode";
 
 export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: boolean }) {
-	const { prompt, abort } = usePrompt(sessionId)
-	const providers = useProviders()
-	const agents = useAgents()
-	const [text, setText] = useState('')
-	const [modelKey, setModelKey] = useState('')
-	const [agent, setAgent] = useState('')
-	const [error, setError] = useState<string | null>(null)
-	const [sending, setSending] = useState(false)
+	const { prompt, abort } = usePrompt(sessionId);
+	const providers = useProviders();
+	const agents = useAgents();
+	const [text, setText] = useState("");
+	const [modelKey, setModelKey] = useState("");
+	const [agent, setAgent] = useState("");
+	const [error, setError] = useState<string | null>(null);
+	const [sending, setSending] = useState(false);
 
 	const models = useMemo(() => {
-		const list: { key: string; label: string }[] = []
+		const list: { key: string; label: string }[] = [];
 		for (const provider of providers) {
 			for (const [id, model] of Object.entries(provider.models)) {
-				list.push({ key: `${provider.id}/${id}`, label: `${provider.name} · ${model.name}` })
+				list.push({ key: `${provider.id}/${id}`, label: `${provider.name} · ${model.name}` });
 			}
 		}
-		return list
-	}, [providers])
+		return list;
+	}, [providers]);
 
-	const submitting = sending || busy
+	const submitting = sending || busy;
 
 	async function submit() {
-		const trimmed = text.trim()
-		if (!trimmed || submitting) return
-		setError(null)
-		setSending(true)
+		const trimmed = text.trim();
+		if (!trimmed || submitting) return;
+		setError(null);
+		setSending(true);
 		try {
-			const [providerID, ...rest] = modelKey.split('/')
+			const [providerID, ...rest] = modelKey.split("/");
 			await prompt({
-				parts: [{ type: 'text', text: trimmed }],
-				model: modelKey ? { providerID, modelID: rest.join('/') } : undefined,
+				parts: [{ type: "text", text: trimmed }],
+				model: modelKey ? { providerID, modelID: rest.join("/") } : undefined,
 				agent: agent || undefined,
-			})
-			setText('')
+			});
+			setText("");
 		} catch (e) {
-			setError(e instanceof Error ? e.message : String(e))
+			setError(e instanceof Error ? e.message : String(e));
 		} finally {
-			setSending(false)
+			setSending(false);
 		}
 	}
 
@@ -54,9 +54,9 @@ export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: b
 					rows={3}
 					onChange={(e) => setText(e.target.value)}
 					onKeyDown={(e) => {
-						if (e.key === 'Enter' && !e.shiftKey) {
-							e.preventDefault()
-							void submit()
+						if (e.key === "Enter" && !e.shiftKey) {
+							e.preventDefault();
+							void submit();
 						}
 					}}
 				/>
@@ -105,5 +105,5 @@ export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: b
 				</div>
 			</div>
 		</div>
-	)
+	);
 }

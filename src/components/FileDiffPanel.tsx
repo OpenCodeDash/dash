@@ -1,94 +1,98 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useFileStatus, useOpenCode } from 'react-opencode'
+import { useCallback, useEffect, useState } from "react";
+import { useFileStatus, useOpenCode } from "react-opencode";
 
 interface DiffFile {
-	file: string
-	text: string
+	file: string;
+	text: string;
 }
 
 interface DiffState {
-	files: DiffFile[]
-	fallback: string | null
-	error: string | null
-	forSession: string | null
-	loading: boolean
+	files: DiffFile[];
+	fallback: string | null;
+	error: string | null;
+	forSession: string | null;
+	loading: boolean;
 }
 
 function normalizeDiff(raw: unknown): DiffFile[] {
 	if (Array.isArray(raw)) {
 		return raw
-			.filter((d): d is Record<string, unknown> => typeof d === 'object' && d !== null && 'file' in d)
+			.filter(
+				(d): d is Record<string, unknown> => typeof d === "object" && d !== null && "file" in d,
+			)
 			.map((d) => ({
 				file: String(d.file),
 				text:
-					typeof d.patch === 'string'
+					typeof d.patch === "string"
 						? d.patch
-						: typeof d.diff === 'string'
+						: typeof d.diff === "string"
 							? d.diff
 							: JSON.stringify(d, null, 2),
-			}))
+			}));
 	}
-	if (raw && typeof raw === 'object') {
+	if (raw && typeof raw === "object") {
 		return Object.entries(raw as Record<string, unknown>).map(([file, value]) => ({
 			file,
-			text: typeof value === 'string' ? value : JSON.stringify(value, null, 2),
-		}))
+			text: typeof value === "string" ? value : JSON.stringify(value, null, 2),
+		}));
 	}
-	return []
+	return [];
 }
 
 function DiffText({ text }: { text: string }) {
 	return (
 		<pre className="diff">
-			{text.split('\n').map((line, i) => {
-				let cls = 'diff-line'
-				if (line.startsWith('@@')) cls = 'diff-hunk'
-				else if (line.startsWith('+')) cls = 'diff-add'
-				else if (line.startsWith('-')) cls = 'diff-del'
+			{text.split("\n").map((line, i) => {
+				let cls = "diff-line";
+				if (line.startsWith("@@")) cls = "diff-hunk";
+				else if (line.startsWith("+")) cls = "diff-add";
+				else if (line.startsWith("-")) cls = "diff-del";
 				return (
 					<span key={i} className={cls}>
 						{line}
-						{'\n'}
+						{"\n"}
 					</span>
-				)
+				);
 			})}
 		</pre>
-	)
+	);
 }
 
 const TYPE_LABEL: Record<string, string> = {
-	added: 'A',
-	modified: 'M',
-	deleted: 'D',
-	renamed: 'R',
-}
+	added: "A",
+	modified: "M",
+	deleted: "D",
+	renamed: "R",
+};
 
 export function FileDiffPanel({ sessionId }: { sessionId: string }) {
-	const client = useOpenCode()
-	const fileStatus = useFileStatus()
+	const client = useOpenCode();
+	const fileStatus = useFileStatus();
 	const [diff, setDiff] = useState<DiffState>({
 		files: [],
 		fallback: null,
 		error: null,
 		forSession: null,
 		loading: false,
-	})
-	const [selected, setSelected] = useState<string | null>(null)
-	const loading = diff.loading || diff.forSession !== sessionId
+	});
+	const [selected, setSelected] = useState<string | null>(null);
+	const loading = diff.loading || diff.forSession !== sessionId;
 
 	const load = useCallback(() => {
-		void Promise.all([client.fileStatus().catch(() => []), client.sessionDiff(sessionId).catch(() => null)]).then(
+		void Promise.all([
+			client.fileStatus().catch(() => []),
+			client.sessionDiff(sessionId).catch(() => null),
+		]).then(
 			([status, rawDiff]) => {
-				client.store.setFileStatus(status)
-				const files = normalizeDiff(rawDiff)
+				client.store.setFileStatus(status);
+				const files = normalizeDiff(rawDiff);
 				setDiff({
 					files,
-					fallback:
-						files.length === 0 && rawDiff != null ? JSON.stringify(rawDiff, null, 2) : null,
+					fallback: files.length === 0 && rawDiff != null ? JSON.stringify(rawDiff, null, 2) : null,
 					error: null,
 					forSession: sessionId,
 					loading: false,
-				})
+				});
 			},
 			(e) =>
 				setDiff((s) => ({
@@ -97,36 +101,36 @@ export function FileDiffPanel({ sessionId }: { sessionId: string }) {
 					forSession: sessionId,
 					loading: false,
 				})),
-		)
-	}, [client, sessionId])
+		);
+	}, [client, sessionId]);
 
 	useEffect(() => {
-		load()
-	}, [load])
+		load();
+	}, [load]);
 
-	const activeFile = diff.files.find((f) => f.file === selected) ?? null
+	const activeFile = diff.files.find((f) => f.file === selected) ?? null;
 
 	return (
 		<aside className="panel">
 			<div className="panel-head">
 				<h2 className="panel-title">Files</h2>
 				<button type="button" className="btn btn-ghost" title="Refresh" onClick={load}>
-					{loading ? '…' : '↻'}
+					{loading ? "…" : "↻"}
 				</button>
 			</div>
 			{diff.error && <div className="panel-error">{diff.error}</div>}
 			<div className="panel-files">
 				{fileStatus.map((entry) => {
-					const hasDiff = diff.files.some((f) => f.file === entry.file)
+					const hasDiff = diff.files.some((f) => f.file === entry.file);
 					return (
 						<button
 							key={entry.file}
 							type="button"
-							className={`file-row ${hasDiff ? '' : 'file-row-plain'}`}
+							className={`file-row ${hasDiff ? "" : "file-row-plain"}`}
 							onClick={() => hasDiff && setSelected(entry.file)}
 						>
 							<span className={`file-type file-type-${entry.type}`}>
-								{TYPE_LABEL[entry.type] ?? '?'}
+								{TYPE_LABEL[entry.type] ?? "?"}
 							</span>
 							<span className="file-name" title={entry.file}>
 								{entry.file}
@@ -136,7 +140,7 @@ export function FileDiffPanel({ sessionId }: { sessionId: string }) {
 								{entry.deletions > 0 && <em className="del">−{entry.deletions}</em>}
 							</span>
 						</button>
-					)
+					);
 				})}
 				{fileStatus.length === 0 && <p className="panel-empty">No changed files.</p>}
 			</div>
@@ -155,5 +159,5 @@ export function FileDiffPanel({ sessionId }: { sessionId: string }) {
 				)}
 			</div>
 		</aside>
-	)
+	);
 }
