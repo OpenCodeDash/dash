@@ -1,0 +1,39 @@
+.header {
+	display: none;
+}
+
+.menu {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 38px;
+	height: 38px;
+	font-size: 18px;
+	border-radius: 8px;
+	color: var(--text);
+
+	&:active {
+		background: var(--bg-elevated);
+	}
+}
+
+.title {
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.spacer {
+	width: 38px;
+}
+
+@media (max-width: 900px) {
+	.header {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 8px 12px;
+		border-bottom: 1px solid var(--border);
+		flex-shrink: 0;
+		background: var(--bg-sidebar);
+	}
+}

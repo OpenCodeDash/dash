@@ -1,0 +1,67 @@
+.session {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 16px;
+	border-bottom: 1px solid var(--border);
+	flex-shrink: 0;
+}
+
+.title {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.meta {
+	display: flex;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.actions {
+	margin-left: auto;
+	display: flex;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.body {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	position: relative;
+}
+
+.main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+@media (max-width: 900px) {
+	.header {
+		padding: 8px 12px;
+	}
+
+	:global(.panel) {
+		position: absolute;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		z-index: 10;
+		width: min(380px, 90vw);
+		box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+	}
+}

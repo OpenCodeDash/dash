@@ -1,0 +1,29 @@
+.app {
+	display: flex;
+	height: 100dvh;
+	overflow: hidden;
+	position: relative;
+}
+
+.main {
+	flex: 1;
+	min-width: 0;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.scrim {
+	display: none;
+}
+
+@media (max-width: 900px) {
+	.scrim {
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: 40;
+		background: rgba(4, 6, 10, 0.55);
+	}
+}

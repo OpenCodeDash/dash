@@ -1,0 +1,67 @@
+.list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.todo {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	font-size: 13px;
+}
+
+.icon {
+	color: var(--text-faint);
+	flex-shrink: 0;
+}
+
+.content {
+	flex: 1;
+}
+
+.priority {
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-faint);
+	flex-shrink: 0;
+}
+
+.completed {
+	.content {
+		text-decoration: line-through;
+		color: var(--text-faint);
+	}
+
+	.icon {
+		color: var(--green);
+	}
+}
+
+.in_progress {
+	.icon {
+		color: var(--accent);
+	}
+}
+
+.cancelled {
+	.icon {
+		color: var(--red);
+	}
+
+	.content {
+		color: var(--text-faint);
+	}
+}
+
+.prio_high {
+	color: var(--red);
+}
+
+.prio_medium {
+	color: var(--yellow);
+}

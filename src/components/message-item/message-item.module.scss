@@ -1,0 +1,106 @@
+.msg {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.role {
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-faint);
+}
+
+.bubble {
+	background: var(--bg-elevated);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 10px 14px;
+
+	p {
+		margin: 0 0 8px;
+		white-space: pre-wrap;
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+}
+
+.body {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.error {
+	padding: 8px 12px;
+	border: 1px solid rgba(236, 95, 90, 0.4);
+	background: rgba(236, 95, 90, 0.1);
+	border-radius: var(--radius);
+	color: var(--red);
+	font-size: 13px;
+}
+
+/* completed reasoning: collapsed, dimmed */
+.reasoning {
+	border: 1px dashed var(--border-strong);
+	border-radius: var(--radius);
+	padding: 6px 12px;
+
+	summary {
+		cursor: pointer;
+		color: var(--text-faint);
+		font-size: 12px;
+		user-select: none;
+	}
+}
+
+/* live reasoning: expanded while the model is still thinking */
+.reasoningLive {
+	border: 1px solid var(--accent);
+	background: rgba(108, 158, 248, 0.08);
+	border-radius: var(--radius);
+	padding: 8px 12px;
+}
+
+.reasoningLiveHead {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--accent);
+	font-size: 12px;
+	font-weight: 600;
+	margin-bottom: 6px;
+}
+
+.thinkingDot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--accent);
+	animation: pulse 1s ease-in-out infinite;
+}
+
+.reasoningMd {
+	color: var(--text-dim);
+	font-size: 13px;
+	margin-top: 4px;
+}
+
+.stepCost {
+	font-size: 11px;
+	color: var(--text-faint);
+	text-align: right;
+}
+
+.cursor {
+	width: 8px;
+	height: 15px;
+	display: inline-block;
+	background: var(--accent);
+	border-radius: 1px;
+	vertical-align: text-bottom;
+	animation: pulse 1s step-end infinite;
+}
