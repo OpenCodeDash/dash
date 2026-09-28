@@ -1,0 +1,154 @@
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+	height: 100%;
+}
+
+body {
+	margin: 0;
+	font-family: var(--font);
+	font-size: 14px;
+	background: var(--bg);
+	color: var(--text);
+	-webkit-font-smoothing: antialiased;
+}
+
+button {
+	font: inherit;
+	color: inherit;
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+}
+
+input,
+textarea,
+select {
+	font: inherit;
+	color: inherit;
+}
+
+pre {
+	margin: 0;
+}
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 12px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	background: var(--bg-elevated);
+	color: var(--text);
+	font-size: 13px;
+	white-space: nowrap;
+	transition:
+		background 0.15s,
+		border-color 0.15s;
+
+	&:hover {
+		background: var(--border);
+	}
+
+	&:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+}
+
+.btn-primary {
+	background: var(--accent-strong);
+	border-color: var(--accent-strong);
+	color: #fff;
+
+	&:hover {
+		background: var(--accent);
+		border-color: var(--accent);
+	}
+}
+
+.btn-danger {
+	background: transparent;
+	border-color: var(--red);
+	color: var(--red);
+
+	&:hover {
+		background: rgba(236, 95, 90, 0.12);
+	}
+}
+
+.btn-ghost {
+	background: transparent;
+	border-color: transparent;
+	color: var(--text-dim);
+
+	&:hover {
+		background: var(--bg-elevated);
+		color: var(--text);
+	}
+}
+
+.btn-active {
+	background: var(--bg-elevated);
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+.icon-btn {
+	color: var(--text-faint);
+	border-radius: 4px;
+	padding: 2px 4px;
+	font-size: 11px;
+
+	&:hover {
+		color: var(--red);
+		background: var(--bg-elevated);
+	}
+}
+
+.chip {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: var(--bg-elevated);
+	border: 1px solid var(--border);
+	color: var(--text-dim);
+	font-size: 12px;
+}
+
+.chip-add {
+	color: var(--green);
+}
+
+.chip-del {
+	color: var(--red);
+}
+
+.chip-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 6px 0;
+}
+
+.select {
+	padding: 5px 8px;
+	border: 1px solid var(--border-strong);
+	border-radius: 6px;
+	background: var(--bg-input);
+	color: var(--text-dim);
+	font-size: 12px;
+	max-width: 240px;
+}
+
+.spacer {
+	flex: 1;
+}
