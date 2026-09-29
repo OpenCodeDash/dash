@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useOpenCode } from "react-opencode";
 import { createSessionInDirectory, fetchPath, listDirectories, OPENCODE_URL, type DirEntry } from "../../server.ts";
 import { Modal } from "../modal/modal.component.tsx";
 import styles from "./directory-picker.module.scss";
@@ -24,6 +25,7 @@ function normalize(dir: string): string {
 
 export function DirectoryPicker({ open, onClose }: DirectoryPickerProps) {
 	const navigate = useNavigate();
+	const client = useOpenCode();
 	const [cwd, setCwd] = useState("/");
 	const [pathInput, setPathInput] = useState("/");
 	const [entries, setEntries] = useState<DirEntry[]>([]);
@@ -86,6 +88,13 @@ export function DirectoryPicker({ open, onClose }: DirectoryPickerProps) {
 		setError(null);
 		createSessionInDirectory(OPENCODE_URL, cwd)
 			.then((s) => {
+				// The opencode server does not emit a session.created event for
+				// API-created sessions, so refresh the store's session list to
+				// make the new session/group appear in the sidebar without a reload.
+				client
+					.listSessions()
+					.then((list) => client.store.setSessions(list))
+					.catch(() => {});
 				onClose();
 				navigate(`/session/${s.id}`);
 			})
