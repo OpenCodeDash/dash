@@ -14,7 +14,7 @@
 		"react": "^19.2.8",
 		"react-dom": "^19.2.8",
 		"react-markdown": "^10.1.0",
-		"react-opencode": "github:eyezahhhh/react-opencode",
+		"react-opencode": "github:eyezahhhh/react-opencode#1fa260ea3e3740ffe8e31458aaf09cfb0eb5bb01",
 		"react-router-dom": "^7.18.4"
 	},
 	"devDependencies": {
