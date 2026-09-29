@@ -5,6 +5,31 @@
 	flex-direction: column;
 }
 
+.breadcrumb {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 16px;
+	border-bottom: 1px solid var(--border);
+	background: var(--bg-panel);
+	flex-shrink: 0;
+	font-size: 12px;
+}
+
+.breadcrumbLink {
+	color: var(--accent);
+	text-decoration: none;
+
+	&:hover {
+		text-decoration: underline;
+	}
+}
+
+.breadcrumbHint {
+	color: var(--text-faint);
+	font-size: 11px;
+}
+
 .header {
 	display: flex;
 	align-items: center;

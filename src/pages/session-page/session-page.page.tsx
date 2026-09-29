@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useFileStatus, useSession, useSessionBusy, useTodos } from "react-opencode";
 import { FileDiffPanel } from "../../components/file-diff-panel/file-diff-panel.component.tsx";
 import { MessageList } from "../../components/message-list/message-list.component.tsx";
@@ -19,12 +19,24 @@ export function SessionPage() {
 	const fileStatus = useFileStatus();
 	const [panel, setPanel] = useState<Panel>(null);
 
+	const isSubagent = Boolean(session?.parentID);
+	const parent = useSession(session?.parentID);
+
 	if (!sessionId) return null;
 
 	const toggle = (p: Exclude<Panel, null>) => setPanel((cur) => (cur === p ? null : p));
 
 	return (
 		<div className={styles.session}>
+			{isSubagent && session && (
+				<div className={styles.breadcrumb}>
+					<Link to={`/session/${session.parentID}`} className={styles.breadcrumbLink}>
+						← {parent?.title ?? "Parent session"}
+					</Link>
+					<span className="chip chip-subagent">subagent</span>
+					<span className={styles.breadcrumbHint}>read-only</span>
+				</div>
+			)}
 			<header className={styles.header}>
 				<h1 className={styles.title}>{session?.title ?? "Session"}</h1>
 				<div className={styles.meta}>
@@ -55,9 +67,13 @@ export function SessionPage() {
 			<div className={styles.body}>
 				<div className={styles.main}>
 					<MessageList sessionId={sessionId} />
-					<PermissionPrompts sessionId={sessionId} />
-					<QuestionPrompts sessionId={sessionId} />
-					<PromptComposer sessionId={sessionId} busy={busy} />
+					{!isSubagent && (
+						<>
+							<PermissionPrompts sessionId={sessionId} />
+							<QuestionPrompts sessionId={sessionId} />
+							<PromptComposer sessionId={sessionId} busy={busy} />
+						</>
+					)}
 				</div>
 				{panel === "todos" && <TodosPanel sessionId={sessionId} />}
 				{panel === "files" && <FileDiffPanel sessionId={sessionId} />}

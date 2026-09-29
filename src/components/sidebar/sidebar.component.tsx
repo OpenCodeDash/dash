@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import { useConnected, useSessions, type Session } from "react-opencode";
 import { SessionGroup } from "../session-group/session-group.component.tsx";
 import { SessionItem } from "../session-item/session-item.component.tsx";
@@ -13,24 +13,44 @@ interface SidebarProps {
 interface Group {
 	directory: string;
 	sessions: Session[];
+	roots: Session[];
+	childrenByParent: Map<string, Session[]>;
+	orphans: Session[];
 }
+
+const byUpdatedDesc = (a: Session, b: Session) => (b.time.updated ?? 0) - (a.time.updated ?? 0);
+const newest = (g: Group) => g.sessions.reduce((max, s) => Math.max(max, s.time.updated ?? 0), 0);
 
 export function Sidebar({ open, onNewSession, onShowServer }: SidebarProps) {
 	const sessions = useSessions();
 	const connected = useConnected();
 
 	const groups = useMemo<Group[]>(() => {
-		const map = new Map<string, Session[]>();
+		const byDir = new Map<string, Session[]>();
 		for (const s of sessions) {
 			const key = s.directory || "/";
-			const arr = map.get(key) ?? [];
+			const arr = byDir.get(key) ?? [];
 			arr.push(s);
-			map.set(key, arr);
+			byDir.set(key, arr);
 		}
-		for (const arr of map.values()) arr.sort((a, b) => (b.time.updated ?? 0) - (a.time.updated ?? 0));
-		return [...map.entries()]
-			.map(([directory, list]) => ({ directory, sessions: list }))
-			.sort((a, b) => (b.sessions[0]?.time.updated ?? 0) - (a.sessions[0]?.time.updated ?? 0));
+		const result: Group[] = [];
+		for (const [directory, list] of byDir.entries()) {
+			const roots = list.filter((s) => !s.parentID).sort(byUpdatedDesc);
+			const childrenByParent = new Map<string, Session[]>();
+			const orphans: Session[] = [];
+			for (const c of list.filter((s) => s.parentID).sort(byUpdatedDesc)) {
+				const pid = c.parentID;
+				if (pid && roots.some((r) => r.id === pid)) {
+					const arr = childrenByParent.get(pid) ?? [];
+					arr.push(c);
+					childrenByParent.set(pid, arr);
+				} else {
+					orphans.push(c);
+				}
+			}
+			result.push({ directory, sessions: list, roots, childrenByParent, orphans });
+		}
+		return result.sort((a, b) => newest(b) - newest(a));
 	}, [sessions]);
 
 	return (
@@ -52,8 +72,16 @@ export function Sidebar({ open, onNewSession, onShowServer }: SidebarProps) {
 						directory={group.directory}
 						sessions={group.sessions}
 					>
-						{group.sessions.map((session) => (
-							<SessionItem key={session.id} session={session} />
+						{group.roots.map((root) => (
+							<Fragment key={root.id}>
+								<SessionItem session={root} />
+								{(group.childrenByParent.get(root.id) ?? []).map((child) => (
+									<SessionItem key={child.id} session={child} nested />
+								))}
+							</Fragment>
+						))}
+						{group.orphans.map((orphan) => (
+							<SessionItem key={orphan.id} session={orphan} />
 						))}
 					</SessionGroup>
 				))}

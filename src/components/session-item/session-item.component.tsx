@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useClientActions, useSessionBusy, type Session } from "react-opencode";
 import styles from "./session-item.module.scss";
 
-export function SessionItem({ session }: { session: Session }) {
+export function SessionItem({ session, nested = false }: { session: Session; nested?: boolean }) {
 	const busy = useSessionBusy(session.id);
 	const { renameSession, deleteSession } = useClientActions();
 	const navigate = useNavigate();
@@ -37,10 +37,15 @@ export function SessionItem({ session }: { session: Session }) {
 
 	return (
 		<div
-			className={`${styles.item} ${active ? styles.active : ""}`}
+			className={`${styles.item} ${active ? styles.active : ""} ${nested ? styles.nested : ""}`}
 			onClick={() => navigate(`/session/${session.id}`)}
 		>
 			{busy && <span className={styles.busy} title="Busy" />}
+			{nested && !renaming && (
+				<span className={styles.branch} title="Subagent">
+					↳
+				</span>
+			)}
 			{renaming ? (
 				<input
 					className={styles.rename}

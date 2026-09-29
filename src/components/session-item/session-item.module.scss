@@ -39,6 +39,16 @@
 	animation: pulse 1s ease-in-out infinite;
 }
 
+.nested {
+	margin-left: 14px;
+}
+
+.branch {
+	flex-shrink: 0;
+	color: var(--text-faint);
+	font-size: 12px;
+}
+
 .rename {
 	flex: 1;
 	min-width: 0;

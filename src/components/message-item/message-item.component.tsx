@@ -6,6 +6,7 @@ import {
 	type Part,
 	type TextPart,
 } from "react-opencode";
+import { SubagentCard } from "../subagent-card/subagent-card.component.tsx";
 import { ToolCard } from "../tool-card/tool-card.component.tsx";
 import styles from "./message-item.module.scss";
 
@@ -91,7 +92,7 @@ function PartView({ part }: { part: Part }) {
 				</details>
 			);
 		case "tool":
-			return <ToolCard part={part} />;
+			return part.tool === "task" ? <SubagentCard part={part} /> : <ToolCard part={part} />;
 		case "step-finish":
 			return part.cost != null ? <div className={styles.stepCost}>${part.cost.toFixed(4)}</div> : null;
 		case "patch":

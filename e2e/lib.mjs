@@ -60,3 +60,29 @@ export async function pickRichSession() {
 	}
 	return best || sessions[0] || null;
 }
+
+// Find a {parent, child} pair where the parent has a `task` tool part whose
+// state.metadata.sessionId resolves to a real child session. This is the exact
+// shape SubagentCard needs to render clickable, so subagent-card / breadcrumb /
+// nesting checks have a real target. Returns null when the server has none.
+export async function pickParentChild() {
+	const res = await fetch(`${API_URL}/session`);
+	const sessions = await res.json();
+	const byId = new Map(sessions.map((s) => [s.id, s]));
+	for (const s of sessions) {
+		if (!s.parentID || !byId.has(s.parentID)) continue;
+		const parent = byId.get(s.parentID);
+		try {
+			const m = await (await fetch(`${API_URL}/session/${parent.id}/message`)).json();
+			const msgs = Array.isArray(m) ? m : [];
+			for (const msg of msgs) {
+				for (const p of msg.parts || []) {
+					const sid = p.type === "tool" && p.tool === "task" ? p.state?.metadata?.sessionId : undefined;
+					const child = typeof sid === "string" ? byId.get(sid) : undefined;
+					if (child) return { parent, child };
+				}
+			}
+		} catch {}
+	}
+	return null;
+}

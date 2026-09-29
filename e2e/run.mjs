@@ -1,6 +1,6 @@
 // Orchestrator for the headless e2e suite.
 //
-//   node e2e/run.mjs            structural + lifecycle + bench
+//   node e2e/run.mjs            structural + lifecycle + subagent + bench
 //   node e2e/run.mjs --with-model   also run model-backed checks (needs a working model)
 //
 // Prereqs (see README.md): opencode server on :4096, Vite dev server on :5173,
@@ -9,6 +9,7 @@ import { CDP } from "./cdp.mjs";
 import { API_URL } from "./lib.mjs";
 import { run as runStructural } from "./structural.test.mjs";
 import { run as runLifecycle } from "./lifecycle.test.mjs";
+import { run as runSubagent } from "./subagent.test.mjs";
 import { run as runBench } from "./bench.test.mjs";
 import { run as runModel } from "./model.test.mjs";
 
@@ -30,6 +31,7 @@ if (!cdpOk || !apiOk) {
 const failures = [];
 if (!(await runStructural())) failures.push("structural");
 if (!(await runLifecycle())) failures.push("lifecycle");
+if (!(await runSubagent())) failures.push("subagent");
 await runBench();
 if (withModel) {
 	if (!(await runModel())) failures.push("model");

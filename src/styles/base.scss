@@ -146,6 +146,12 @@ pre {
 	color: var(--red);
 }
 
+.chip-subagent {
+	color: var(--accent);
+	border-color: rgba(108, 158, 248, 0.3);
+	background: rgba(108, 158, 248, 0.1);
+}
+
 .chip-row {
 	display: flex;
 	flex-wrap: wrap;
