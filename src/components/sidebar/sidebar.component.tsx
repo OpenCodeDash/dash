@@ -1,5 +1,8 @@
 import { Fragment, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useBoards, useClientActions } from "react-backdash";
 import { useConnected, useSessions, type Session } from "react-opencode";
+import { BoardItem } from "../board-item/board-item.component.tsx";
 import { SessionGroup } from "../session-group/session-group.component.tsx";
 import { SessionItem } from "../session-item/session-item.component.tsx";
 import styles from "./sidebar.module.scss";
@@ -24,6 +27,18 @@ const newest = (g: Group) => g.sessions.reduce((max, s) => Math.max(max, s.time.
 export function Sidebar({ open, onNewSession, onShowServer }: SidebarProps) {
 	const sessions = useSessions();
 	const connected = useConnected();
+	const boards = useBoards();
+	const { createBoard } = useClientActions();
+	const navigate = useNavigate();
+
+	function newBoard() {
+		const name = window.prompt("Board name");
+		if (name && name.trim()) {
+			void createBoard(name.trim())
+				.then(() => navigate("/boards"))
+				.catch(() => undefined);
+		}
+	}
 
 	const groups = useMemo<Group[]>(() => {
 		const byDir = new Map<string, Session[]>();
@@ -87,6 +102,24 @@ export function Sidebar({ open, onNewSession, onShowServer }: SidebarProps) {
 				))}
 				{sessions.length === 0 && <div className={styles.empty}>No sessions yet</div>}
 			</nav>
+			<div className={styles.boardsHeader}>
+				<span className={styles.title}>Boards</span>
+				<button
+					type="button"
+					className="btn btn-ghost"
+					title="New board"
+					onClick={newBoard}
+					onKeyDown={(e) => e.stopPropagation()}
+				>
+					+ New
+				</button>
+			</div>
+			<div className={styles.boardsList}>
+				{boards.map((board) => (
+					<BoardItem key={board.id} board={board} />
+				))}
+				{boards.length === 0 && <div className={styles.empty}>No boards yet</div>}
+			</div>
 			<div className={styles.footer}>
 				<button type="button" className={styles.footerBtn} onClick={onShowServer}>
 					<span className="status-dot status-dot-connected" />

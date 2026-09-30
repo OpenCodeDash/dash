@@ -2,6 +2,7 @@
 // used to spin up / clean up scratch sessions deterministically.
 export const API_URL = process.env.API_URL || "http://localhost:4096";
 export const APP_URL = process.env.APP_URL || "http://localhost:5173";
+export const BOARD_URL = process.env.BOARD_URL || "http://localhost:3000";
 
 export class Suite {
 	constructor(name) {

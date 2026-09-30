@@ -71,3 +71,25 @@ export default defineConfig([
 	},
 ]);
 ```
+
+## E2E tests
+
+Headless e2e suite in `e2e/`, driven over the Chrome DevTools Protocol with no external deps.
+
+```sh
+npm run test:e2e              # structural + lifecycle + subagent + bench + boards + tasks
+npm run test:e2e -- --with-model   # also run model-backed checks (needs a working model)
+```
+
+Suites run independently: `e2e/run.mjs` wraps each in `runSuite`, so a crashing suite records a failure instead of aborting the rest.
+
+Prereqs (all must be running):
+
+| Service | Default | Needed by |
+| --- | --- | --- |
+| opencode server (`opencode serve`) | `:4096` | all suites |
+| Vite dev server (`npm run dev`) | `:5173` | all suites |
+| Headless Chromium with CDP (`chromium --headless --remote-debugging-port=9222`) | `:9222` | all suites |
+| backdash server | `:3000` | boards + tasks suites (skipped when unreachable) |
+
+Overrides via env: `API_URL`, `APP_URL`, `BOARD_URL`, `CDP_HOST`, `CDP_PORT`, `SHOT_DIR` (screenshot dir for `Client.shot`).

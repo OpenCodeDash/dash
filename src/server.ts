@@ -6,7 +6,12 @@ export interface DirEntry extends FileEntry {
 	ignored?: boolean;
 }
 
-export const OPENCODE_URL = import.meta.env.VITE_OPENCODE_URL ?? "http://localhost:4096";
+// 127.0.0.1, not localhost: headless Chromium hangs resolving `localhost`
+// (fe80::1%lo0 / ::1-first) for cross-origin fetches, but the IPv4 literal works.
+// The opencode server binds 0.0.0.0 (IPv4-only), so localhost would never connect.
+export const OPENCODE_URL = import.meta.env.VITE_OPENCODE_URL ?? "http://127.0.0.1:4096";
+
+export const BACKDASH_URL = import.meta.env.VITE_BACKDASH_URL ?? "http://127.0.0.1:3000";
 
 /**
  * Shape returned by `GET /path`. The react-opencode client types this loosely

@@ -1,0 +1,34 @@
+.item {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 8px;
+	border-radius: var(--radius);
+	cursor: pointer;
+	font-size: 13px;
+	color: var(--text-dim);
+
+	&:hover {
+		background: var(--bg-elevated);
+		color: var(--text);
+	}
+}
+
+.active {
+	background: var(--bg-elevated);
+	color: var(--text);
+}
+
+.title {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.rename {
+	flex: 1;
+	min-width: 0;
+	font-size: 13px;
+}
