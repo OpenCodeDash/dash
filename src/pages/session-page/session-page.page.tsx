@@ -66,7 +66,7 @@ export function SessionPage() {
 			</header>
 			<div className={styles.body}>
 				<div className={styles.main}>
-					<MessageList sessionId={sessionId} />
+					<MessageList key={sessionId} sessionId={sessionId} />
 					{!isSubagent && (
 						<>
 							<PermissionPrompts sessionId={sessionId} />

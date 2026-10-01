@@ -10,6 +10,20 @@ import { Suite, APP_URL, pickParentChild } from "./lib.mjs";
 
 const clickFirst = (sel) => `(() => { const el=document.querySelector(${JSON.stringify(sel)}); if(!el) return false; el.scrollIntoView({block:'center'}); el.click(); return true; })()`;
 
+// The transcript is virtualized and history is loaded in chunks, so an older
+// subagent card is only in the DOM once it has been loaded and scrolled into
+// range. Jump to the top of the list (which triggers the next older chunk) and
+// poll until the selector appears.
+async function scrollUpToFind(c, sel, maxRounds = 40) {
+	for (let i = 0; i < maxRounds; i++) {
+		if (await c.eval(`!!document.querySelector(${JSON.stringify(sel)})`)) return true;
+		const ok = await c.eval(`(() => { const el=document.querySelector('[data-virtuoso-scroller]'); if(!el) return false; el.scrollTop = 0; return true; })()`);
+		if (!ok) return false;
+		await sleep(700);
+	}
+	return false;
+}
+
 export async function run() {
 	const s = new Suite("subagent");
 	const pair = await pickParentChild();
@@ -34,6 +48,7 @@ export async function run() {
 		results("2. Subagent cards");
 		await c.send("Page.navigate", { url: `${APP_URL}/session/${parent.id}` });
 		await sleep(3000);
+		await scrollUpToFind(c, 'button[title="View subagent session"]');
 		const cards = await c.eval(`document.querySelectorAll('button[title="View subagent session"]').length`);
 		s.check("subagent cards rendered in parent", cards > 0, `${cards} cards`);
 		const typeChip = await c.eval(`(() => { const b=document.querySelector('button[title="View subagent session"]'); return b ? [...b.querySelectorAll('span')].some(x=>/explore|code-reviewer|general|test-writer/i.test(x.textContent||'')) : false })()`);
