@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useClientActions, type BoardSummary } from "react-backdash";
+import { ConfirmDialog } from "../confirm-dialog/confirm-dialog.component.tsx";
 import styles from "./board-item.module.scss";
 
 export function BoardItem({ board }: { board: BoardSummary }) {
@@ -9,6 +10,7 @@ export function BoardItem({ board }: { board: BoardSummary }) {
 	const location = useLocation();
 	const [renaming, setRenaming] = useState(false);
 	const [title, setTitle] = useState("");
+	const [confirming, setConfirming] = useState(false);
 	const active =
 		location.pathname === `/boards/${board.id}` || location.pathname === `/boards/${board.id}/`;
 
@@ -25,50 +27,60 @@ export function BoardItem({ board }: { board: BoardSummary }) {
 		}
 	}
 
-	function remove() {
-		if (window.confirm(`Delete board "${board.name}"? This removes its columns.`)) {
-			void deleteBoard(board.id)
-				.then(() => {
-					if (active) navigate("/boards");
-				})
-				.catch(() => undefined);
-		}
+	function confirmDelete() {
+		setConfirming(false);
+		void deleteBoard(board.id)
+			.then(() => {
+				if (active) navigate("/boards");
+			})
+			.catch(() => undefined);
 	}
 
 	return (
-		<div
-			className={`${styles.item} ${active ? styles.active : ""}`}
-			onClick={() => navigate(`/boards/${board.id}`)}
-		>
-			{renaming ? (
-				<input
-					className={styles.rename}
-					value={title}
-					autoFocus
-					onClick={(e) => e.stopPropagation()}
-					onChange={(e) => setTitle(e.target.value)}
-					onBlur={commitRename}
-					onKeyDown={(e) => {
-						if (e.key === "Enter") commitRename();
-						if (e.key === "Escape") setRenaming(false);
-					}}
-				/>
-			) : (
-				<span className={styles.title} onDoubleClick={startRename} title="Double-click to rename">
-					{board.name}
-				</span>
-			)}
-			<button
-				type="button"
-				className="icon-btn"
-				title="Delete board"
-				onClick={(e) => {
-					e.stopPropagation();
-					remove();
-				}}
+		<>
+			<div
+				className={`${styles.item} ${active ? styles.active : ""}`}
+				onClick={() => navigate(`/boards/${board.id}`)}
 			>
-				✕
-			</button>
-		</div>
+				{renaming ? (
+					<input
+						className={styles.rename}
+						value={title}
+						autoFocus
+						onClick={(e) => e.stopPropagation()}
+						onChange={(e) => setTitle(e.target.value)}
+						onBlur={commitRename}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") commitRename();
+							if (e.key === "Escape") setRenaming(false);
+						}}
+					/>
+				) : (
+					<span className={styles.title} onDoubleClick={startRename} title="Double-click to rename">
+						{board.name}
+					</span>
+				)}
+				<button
+					type="button"
+					className="icon-btn"
+					title="Delete board"
+					onClick={(e) => {
+						e.stopPropagation();
+						setConfirming(true);
+					}}
+				>
+					✕
+				</button>
+			</div>
+			<ConfirmDialog
+				open={confirming}
+				title="Delete board"
+				message={`Delete board "${board.name}"? This removes its columns.`}
+				confirmLabel="Delete"
+				danger
+				onConfirm={confirmDelete}
+				onCancel={() => setConfirming(false)}
+			/>
+		</>
 	);
 }

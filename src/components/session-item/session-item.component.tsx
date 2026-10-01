@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useClientActions, useSessionBusy, type Session } from "react-opencode";
+import { ConfirmDialog } from "../confirm-dialog/confirm-dialog.component.tsx";
 import styles from "./session-item.module.scss";
 
 export function SessionItem({ session, nested = false }: { session: Session; nested?: boolean }) {
@@ -10,6 +11,7 @@ export function SessionItem({ session, nested = false }: { session: Session; nes
 	const location = useLocation();
 	const [renaming, setRenaming] = useState(false);
 	const [title, setTitle] = useState("");
+	const [confirming, setConfirming] = useState(false);
 	const active = location.pathname === `/session/${session.id}`;
 
 	function startRename() {
@@ -25,56 +27,66 @@ export function SessionItem({ session, nested = false }: { session: Session; nes
 		}
 	}
 
-	function remove() {
-		if (window.confirm(`Delete session "${session.title ?? "New session"}"?`)) {
-			void deleteSession(session.id)
-				.then(() => {
-					if (active) navigate("/");
-				})
-				.catch(() => undefined);
-		}
+	function confirmDelete() {
+		setConfirming(false);
+		void deleteSession(session.id)
+			.then(() => {
+				if (active) navigate("/");
+			})
+			.catch(() => undefined);
 	}
 
 	return (
-		<div
-			className={`${styles.item} ${active ? styles.active : ""} ${nested ? styles.nested : ""}`}
-			onClick={() => navigate(`/session/${session.id}`)}
-		>
-			{busy && <span className={styles.busy} title="Busy" />}
-			{nested && !renaming && (
-				<span className={styles.branch} title="Subagent">
-					↳
-				</span>
-			)}
-			{renaming ? (
-				<input
-					className={styles.rename}
-					value={title}
-					autoFocus
-					onClick={(e) => e.stopPropagation()}
-					onChange={(e) => setTitle(e.target.value)}
-					onBlur={commitRename}
-					onKeyDown={(e) => {
-						if (e.key === "Enter") commitRename();
-						if (e.key === "Escape") setRenaming(false);
-					}}
-				/>
-			) : (
-				<span className={styles.title} onDoubleClick={startRename} title="Double-click to rename">
-					{session.title ?? "New session"}
-				</span>
-			)}
-			<button
-				type="button"
-				className="icon-btn"
-				title="Delete session"
-				onClick={(e) => {
-					e.stopPropagation();
-					remove();
-				}}
+		<>
+			<div
+				className={`${styles.item} ${active ? styles.active : ""} ${nested ? styles.nested : ""}`}
+				onClick={() => navigate(`/session/${session.id}`)}
 			>
-				✕
-			</button>
-		</div>
+				{busy && <span className={styles.busy} title="Busy" />}
+				{nested && !renaming && (
+					<span className={styles.branch} title="Subagent">
+						↳
+					</span>
+				)}
+				{renaming ? (
+					<input
+						className={styles.rename}
+						value={title}
+						autoFocus
+						onClick={(e) => e.stopPropagation()}
+						onChange={(e) => setTitle(e.target.value)}
+						onBlur={commitRename}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") commitRename();
+							if (e.key === "Escape") setRenaming(false);
+						}}
+					/>
+				) : (
+					<span className={styles.title} onDoubleClick={startRename} title="Double-click to rename">
+						{session.title ?? "New session"}
+					</span>
+				)}
+				<button
+					type="button"
+					className="icon-btn"
+					title="Delete session"
+					onClick={(e) => {
+						e.stopPropagation();
+						setConfirming(true);
+					}}
+				>
+					✕
+				</button>
+			</div>
+			<ConfirmDialog
+				open={confirming}
+				title="Delete session"
+				message={`Delete session "${session.title ?? "New session"}"?`}
+				confirmLabel="Delete"
+				danger
+				onConfirm={confirmDelete}
+				onCancel={() => setConfirming(false)}
+			/>
+		</>
 	);
 }

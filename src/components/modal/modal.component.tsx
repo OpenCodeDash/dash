@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import styles from "./modal.module.scss";
 
 interface ModalProps {
@@ -22,7 +23,9 @@ export function Modal({ open, onClose, title, children, footer, maxWidth }: Moda
 
 	if (!open) return null;
 
-	return (
+	// Portal to document.body so the fixed backdrop escapes any transformed
+	// ancestor (e.g. the mobile slide-in sidebar) and always covers the viewport.
+	return createPortal(
 		<div className="modal-backdrop" onMouseDown={onClose}>
 			<div
 				className="modal-dialog"
@@ -40,6 +43,7 @@ export function Modal({ open, onClose, title, children, footer, maxWidth }: Moda
 				<div className="modal-body">{children}</div>
 				{footer && <div className={styles.footer}>{footer}</div>}
 			</div>
-		</div>
+		</div>,
+		document.body
 	);
 }

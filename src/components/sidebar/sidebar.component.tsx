@@ -1,8 +1,9 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBoards, useClientActions } from "react-backdash";
 import { useConnected, useSessions, type Session } from "react-opencode";
 import { BoardItem } from "../board-item/board-item.component.tsx";
+import { PromptDialog } from "../prompt-dialog/prompt-dialog.component.tsx";
 import { SessionGroup } from "../session-group/session-group.component.tsx";
 import { SessionItem } from "../session-item/session-item.component.tsx";
 import styles from "./sidebar.module.scss";
@@ -30,14 +31,13 @@ export function Sidebar({ open, onNewSession, onShowServer }: SidebarProps) {
 	const boards = useBoards();
 	const { createBoard } = useClientActions();
 	const navigate = useNavigate();
+	const [creatingBoard, setCreatingBoard] = useState(false);
 
-	function newBoard() {
-		const name = window.prompt("Board name");
-		if (name && name.trim()) {
-			void createBoard(name.trim())
-				.then(() => navigate("/boards"))
-				.catch(() => undefined);
-		}
+	function createBoardFromPrompt(name: string) {
+		setCreatingBoard(false);
+		void createBoard(name)
+			.then(() => navigate("/boards"))
+			.catch(() => undefined);
 	}
 
 	const groups = useMemo<Group[]>(() => {
@@ -108,7 +108,7 @@ export function Sidebar({ open, onNewSession, onShowServer }: SidebarProps) {
 					type="button"
 					className="btn btn-ghost"
 					title="New board"
-					onClick={newBoard}
+					onClick={() => setCreatingBoard(true)}
 					onKeyDown={(e) => e.stopPropagation()}
 				>
 					+ New
@@ -126,6 +126,15 @@ export function Sidebar({ open, onNewSession, onShowServer }: SidebarProps) {
 					Server
 				</button>
 			</div>
+			<PromptDialog
+				open={creatingBoard}
+				title="New board"
+				message="Give the new board a name."
+				placeholder="Board name"
+				submitLabel="Create"
+				onSubmit={createBoardFromPrompt}
+				onClose={() => setCreatingBoard(false)}
+			/>
 		</aside>
 	);
 }

@@ -8,6 +8,7 @@ import {
 	type Column,
 	type Task,
 } from "react-backdash";
+import { ConfirmDialog } from "../../components/confirm-dialog/confirm-dialog.component.tsx";
 import styles from "./board-page.module.scss";
 
 type DragState =
@@ -153,6 +154,7 @@ function ColumnCard({
 	const [renaming, setRenaming] = useState(false);
 	const [title, setTitle] = useState("");
 	const [taskName, setTaskName] = useState("");
+	const [confirming, setConfirming] = useState(false);
 
 	function commitRename() {
 		setRenaming(false);
@@ -160,6 +162,11 @@ function ColumnCard({
 		if (trimmed && trimmed !== column.name) {
 			void updateColumn(boardId, column.id, { name: trimmed }).catch(() => undefined);
 		}
+	}
+
+	function confirmDelete() {
+		setConfirming(false);
+		void deleteColumn(boardId, column.id).catch(() => undefined);
 	}
 
 	function addTask(e: React.FormEvent) {
@@ -171,90 +178,102 @@ function ColumnCard({
 	}
 
 	return (
-		<div
-			className={`${styles.card} ${drag?.kind === "column" && drag.id === column.id ? styles.dragging : ""}`}
-			draggable
-			data-column-id={column.id}
-			onDragStart={(e) => {
-				e.dataTransfer.effectAllowed = "move";
-				onColumnDragStart(column.id);
-			}}
-			onDragEnd={onDragEnd}
-			onDragOver={(e) => e.preventDefault()}
-			onDrop={(e) => {
-				e.preventDefault();
-				onColumnDrop(column.id);
-			}}
-		>
-			<div className={styles.cardTop}>
-				<span className={styles.handle} title="Drag to reorder">
-					⠿
-				</span>
-				{renaming ? (
-					<input
-						className={styles.rename}
-						value={title}
-						autoFocus
-						draggable={false}
-						onClick={(e) => e.stopPropagation()}
-						onChange={(e) => setTitle(e.target.value)}
-						onBlur={commitRename}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") commitRename();
-							if (e.key === "Escape") setRenaming(false);
-						}}
-					/>
-				) : (
-					<span
-						className={styles.name}
-						data-column-name={column.id}
-						onDoubleClick={() => {
-							setTitle(column.name);
-							setRenaming(true);
-						}}
-						title="Double-click to rename"
-					>
-						{column.name}
+		<>
+			<div
+				className={`${styles.card} ${drag?.kind === "column" && drag.id === column.id ? styles.dragging : ""}`}
+				draggable
+				data-column-id={column.id}
+				onDragStart={(e) => {
+					e.dataTransfer.effectAllowed = "move";
+					onColumnDragStart(column.id);
+				}}
+				onDragEnd={onDragEnd}
+				onDragOver={(e) => e.preventDefault()}
+				onDrop={(e) => {
+					e.preventDefault();
+					onColumnDrop(column.id);
+				}}
+			>
+				<div className={styles.cardTop}>
+					<span className={styles.handle} title="Drag to reorder">
+						⠿
 					</span>
-				)}
-				<button type="button" className="icon-btn" title="Delete column" onClick={() => {
-					if (window.confirm(`Delete column "${column.name}"?`)) {
-						void deleteColumn(boardId, column.id).catch(() => undefined);
-					}
-				}}>
-					✕
-				</button>
-			</div>
-			{column.isQueue && <span className={styles.queueBadge}>queue</span>}
+					{renaming ? (
+						<input
+							className={styles.rename}
+							value={title}
+							autoFocus
+							draggable={false}
+							onClick={(e) => e.stopPropagation()}
+							onChange={(e) => setTitle(e.target.value)}
+							onBlur={commitRename}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") commitRename();
+								if (e.key === "Escape") setRenaming(false);
+							}}
+						/>
+					) : (
+						<span
+							className={styles.name}
+							data-column-name={column.id}
+							onDoubleClick={() => {
+								setTitle(column.name);
+								setRenaming(true);
+							}}
+							title="Double-click to rename"
+						>
+							{column.name}
+						</span>
+					)}
+					<button
+						type="button"
+						className="icon-btn"
+						title="Delete column"
+						onClick={() => setConfirming(true)}
+					>
+						✕
+					</button>
+				</div>
+				{column.isQueue && <span className={styles.queueBadge}>queue</span>}
 
-			<div className={styles.tasks}>
-				{column.tasks.map((task) => (
-					<TaskCard
-						key={task.id}
-						task={task}
-						column={column}
-						boardId={boardId}
-						isDragSource={drag?.kind === "task" && drag.id === task.id}
-						onDragStartTask={onTaskDragStart}
-						onDropOnTask={onDropOnTask}
-						onDragEnd={onDragEnd}
+				<div className={styles.tasks}>
+					{column.tasks.map((task) => (
+						<TaskCard
+							key={task.id}
+							task={task}
+							column={column}
+							boardId={boardId}
+							isDragSource={drag?.kind === "task" && drag.id === task.id}
+							onDragStartTask={onTaskDragStart}
+							onDropOnTask={onDropOnTask}
+							onDragEnd={onDragEnd}
+						/>
+					))}
+					{column.tasks.length === 0 && <div className={styles.empty}>No tasks</div>}
+				</div>
+
+				<form className={styles.addTask} onSubmit={addTask}>
+					<input
+						value={taskName}
+						placeholder="Add task…"
+						aria-label={`New task in ${column.name}`}
+						onChange={(e) => setTaskName(e.target.value)}
 					/>
-				))}
-				{column.tasks.length === 0 && <div className={styles.empty}>No tasks</div>}
+					<button type="submit" className="btn btn-primary" disabled={!taskName.trim()}>
+						Add
+					</button>
+				</form>
 			</div>
-
-			<form className={styles.addTask} onSubmit={addTask}>
-				<input
-					value={taskName}
-					placeholder="Add task…"
-					aria-label={`New task in ${column.name}`}
-					onChange={(e) => setTaskName(e.target.value)}
-				/>
-				<button type="submit" className="btn btn-primary" disabled={!taskName.trim()}>
-					Add
-				</button>
-			</form>
-		</div>
+			<ConfirmDialog
+				open={confirming}
+				title="Delete column"
+				message={`Delete column "${column.name}"?`}
+				confirmLabel="Delete"
+				danger
+				onConfirm={confirmDelete}
+				onCancel={() => setConfirming(false)}
+			/>
+		</>
 	);
 }
 
@@ -268,6 +287,7 @@ export function BoardPage() {
 	const [missingId, setMissingId] = useState<string | null>(null);
 	const [name, setName] = useState("");
 	const [drag, setDrag] = useState<DragState>(null);
+	const [confirming, setConfirming] = useState(false);
 	const notFound = missingId === boardId;
 
 	useEffect(() => {
@@ -347,6 +367,14 @@ export function BoardPage() {
 		void createColumn(board.id, { name: trimmed }).catch(() => undefined);
 	}
 
+	function deleteBoardConfirmed() {
+		if (!board) return;
+		setConfirming(false);
+		void deleteBoard(board.id)
+			.then(() => navigate("/boards"))
+			.catch(() => undefined);
+	}
+
 	if (notFound) {
 		return (
 			<div className={styles.page}>
@@ -388,13 +416,7 @@ export function BoardPage() {
 						type="button"
 						className="icon-btn"
 						title="Delete board"
-						onClick={() => {
-							if (window.confirm(`Delete board "${board.name}"? This removes its columns.`)) {
-								void deleteBoard(board.id)
-									.then(() => navigate("/boards"))
-									.catch(() => undefined);
-							}
-						}}
+						onClick={() => setConfirming(true)}
 					>
 						✕
 					</button>
@@ -430,6 +452,15 @@ export function BoardPage() {
 					</form>
 				</div>
 			</div>
+			<ConfirmDialog
+				open={confirming}
+				title="Delete board"
+				message={`Delete board "${board.name}"? This removes its columns.`}
+				confirmLabel="Delete"
+				danger
+				onConfirm={deleteBoardConfirmed}
+				onCancel={() => setConfirming(false)}
+			/>
 		</div>
 	);
 }

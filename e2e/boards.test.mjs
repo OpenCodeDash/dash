@@ -69,7 +69,13 @@ export async function run() {
 			await c.eval(typeSel('input[aria-label="New column name"]', col));
 			await c.eval(submitColumnForm());
 		}
-		await sleep(400);
+		// Columns are applied from the SSE stream; poll instead of assuming a
+		// fixed render latency (a slow/laden host can exceed a short sleep).
+		await waitEval(
+			c,
+			`(() => { const t=${CARDS}.map(c=>c.textContent); return t.some(x=>x.includes("First")) && t.some(x=>x.includes("Second")); })()`,
+			6000,
+		);
 		const cols = await c.eval(`${CARDS}.map(c=>c.textContent)`);
 		s.check("both columns render", cols.some((t) => t.includes("First")) && cols.some((t) => t.includes("Second")), JSON.stringify(cols.map((x) => x.slice(0, 20))));
 		const boardId = await c.eval(`location.pathname.split("/").pop()`);

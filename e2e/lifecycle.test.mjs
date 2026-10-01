@@ -93,17 +93,23 @@ export async function run() {
   const afterRename = await findGroup(c, groupKey);
   s.check("double-click renames the session item", renamed.ok && setRename.ok && commitRename.ok && afterRename?.title === "e2e-renamed", `title='${afterRename?.title}'`);
 
-	// C. Delete (confirm auto-true)
+	// C. Delete via the custom confirm modal (no native window.confirm).
 	results("C. Delete");
-	await c.eval("window.confirm=()=>true");
 	const del = await c.eval(`(function(){
 	  const h=[...document.querySelectorAll('aside button')].find(b=>/▸|▾/.test(b.textContent)&&(b.textContent||'').includes(${JSON.stringify(groupKey)}));
 	  const item=h?.parentElement.querySelector('span[title="Double-click to rename"]')?.parentElement;
 	  const btn=item?.querySelector('button[title="Delete session"]'); if(!btn) return {ok:false}; btn.click(); return {ok:true};
 	})()`);
+	await sleep(400);
+	const confirm = await c.eval(`(function(){
+	  const dlg=document.querySelector('[role="dialog"]'); if(!dlg) return {ok:false, why:'no dialog'};
+	  const title=dlg.querySelector('.modal-title')?.textContent || '';
+	  const b=[...dlg.querySelectorAll('button')].find(x=>(x.textContent||'').trim()==='Delete');
+	  if(!b) return {ok:false, title}; b.click(); return {ok:true, title};
+	})()`);
 	await sleep(1500);
 	const grpGone = await c.eval(`(function(){ return ![...document.querySelectorAll('aside button')].some(b=>/▸|▾/.test(b.textContent)&&(b.textContent||'').includes(${JSON.stringify(groupKey)})); })()`);
-	s.check("delete (confirmed) removes the group", del.ok && grpGone);
+	s.check("delete (confirmed via modal) removes the group", del.ok && confirm.ok && grpGone, JSON.stringify(confirm));
 
 	await c.close();
 	rmSync(scratchDir, { recursive: true, force: true });
