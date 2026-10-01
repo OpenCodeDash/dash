@@ -38,6 +38,22 @@ textarea,
 select {
 	font: inherit;
 	color: inherit;
+	background: var(--bg-input);
+	border: 1px solid var(--border-strong);
+	border-radius: 6px;
+	padding: 6px 9px;
+	outline: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+	border-color: var(--accent);
+}
+
+input::placeholder,
+textarea::placeholder {
+	color: var(--text-faint);
 }
 
 pre {
