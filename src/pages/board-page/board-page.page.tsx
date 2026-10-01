@@ -234,7 +234,18 @@ function ColumnCard({
 						✕
 					</button>
 				</div>
-				{column.isQueue && <span className={styles.queueBadge}>queue</span>}
+				<button
+				type="button"
+				className={`${styles.queueToggle} ${column.isQueue ? styles.queueOn : ""}`}
+				title={
+					column.isQueue
+						? "Queue column — agents can claim its tasks. Click to make it a normal column."
+						: "Mark as a queue so agents can claim its tasks."
+				}
+				onClick={() => void updateColumn(boardId, column.id, { isQueue: !column.isQueue }).catch(() => undefined)}
+			>
+				{column.isQueue ? "queue" : "+ queue"}
+			</button>
 
 				<div className={styles.tasks}>
 					{column.tasks.map((task) => (

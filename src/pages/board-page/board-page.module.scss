@@ -89,16 +89,36 @@
 	font-size: 14px;
 }
 
-.queueBadge {
-	display: inline-block;
+.queueToggle {
+	align-self: flex-start;
 	margin-top: 8px;
 	font-size: 11px;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
-	color: var(--text-dim);
-	border: 1px solid var(--border);
+	color: var(--text-faint);
+	border: 1px dashed var(--border-strong);
 	border-radius: 999px;
 	padding: 1px 8px;
+	transition:
+		color 0.15s,
+		border-color 0.15s,
+		background 0.15s;
+
+	&:hover {
+		color: var(--text-dim);
+		border-color: var(--text-faint);
+	}
+}
+
+.queueOn {
+	color: var(--accent);
+	border: 1px solid var(--accent);
+	background: rgba(108, 158, 248, 0.12);
+
+	&:hover {
+		color: var(--accent);
+		background: rgba(108, 158, 248, 0.2);
+	}
 }
 
 .addCard {
