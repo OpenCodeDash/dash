@@ -9,13 +9,13 @@
 	color: var(--text-dim);
 
 	&:hover {
-		background: var(--bg-elevated);
+		background: var(--bg-hover);
 		color: var(--text);
 	}
 }
 
 .active {
-	background: var(--bg-elevated);
+	background: var(--bg-active);
 	color: var(--text);
 }
 

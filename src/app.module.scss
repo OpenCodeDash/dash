@@ -24,6 +24,6 @@
 		position: fixed;
 		inset: 0;
 		z-index: 40;
-		background: rgba(4, 6, 10, 0.55);
+		background: var(--overlay);
 	}
 }

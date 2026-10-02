@@ -36,8 +36,8 @@
 
 .error {
 	padding: 8px 12px;
-	border: 1px solid rgba(236, 95, 90, 0.4);
-	background: rgba(236, 95, 90, 0.1);
+	border: 1px solid var(--red-line);
+	background: var(--red-soft);
 	border-radius: var(--radius);
 	color: var(--red);
 	font-size: 13px;
@@ -60,7 +60,7 @@
 /* live reasoning: expanded while the model is still thinking */
 .reasoningLive {
 	border: 1px solid var(--accent);
-	background: rgba(108, 158, 248, 0.08);
+	background: var(--accent-soft);
 	border-radius: var(--radius);
 	padding: 8px 12px;
 }

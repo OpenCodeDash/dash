@@ -15,7 +15,7 @@
 	font-size: 13px;
 
 	&:hover:not(:disabled) {
-		background: var(--bg-elevated);
+		background: var(--bg-hover);
 	}
 
 	&:disabled {
@@ -51,8 +51,8 @@
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 	color: var(--accent);
-	background: rgba(108, 158, 248, 0.12);
-	border: 1px solid rgba(108, 158, 248, 0.3);
+	background: var(--accent-soft);
+	border: 1px solid var(--accent-line);
 	border-radius: 999px;
 	padding: 1px 6px;
 }
