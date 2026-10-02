@@ -31,6 +31,11 @@ async function streaming(c, s) {
 		// A long-enough response so token streaming spans multiple polls (a tiny
 		// reply can complete before the first sample, making "growth" unobservable).
 		await c.eval(sendPrompt("List the first 30 prime numbers, one per line. Start from 2."));
+		// Regression for #30: the composer must clear on send, not after the
+		// (slow) synchronous prompt resolves.
+		await sleep(200);
+		const composerEmpty = await c.eval(`document.querySelector('textarea').value === ''`);
+		s.check("composer cleared on send", composerEmpty);
 		// While streaming the assistant message is NOT a `.md` block (those only
 		// render on completion); the in-progress text lives in the `.msg` container
 		// that holds the streaming cursor. Measure that container's length to see

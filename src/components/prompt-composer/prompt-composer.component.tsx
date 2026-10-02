@@ -29,6 +29,9 @@ export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: b
 		if (!trimmed || submitting) return;
 		setError(null);
 		setSending(true);
+		// Clear optimistically: the sync prompt endpoint resolves only after the
+		// whole turn finishes, so waiting to clear leaves the text sitting there.
+		setText("");
 		try {
 			const [providerID, ...rest] = modelKey.split("/");
 			await prompt({
@@ -36,9 +39,10 @@ export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: b
 				model: modelKey ? { providerID, modelID: rest.join("/") } : undefined,
 				agent: agent || undefined,
 			});
-			setText("");
 		} catch (e) {
 			setError(e instanceof Error ? e.message : String(e));
+			// Restore the failed message unless the user already started typing.
+			setText((cur) => (cur ? cur : trimmed));
 		} finally {
 			setSending(false);
 		}
