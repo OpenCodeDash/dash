@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBoards, useClientActions } from "react-backdash";
 import { useConnected, useSessions, type Session } from "react-opencode";
+import { useTheme } from "../../hooks/use-theme.ts";
 import { BoardItem } from "../board-item/board-item.component.tsx";
 import { PromptDialog } from "../prompt-dialog/prompt-dialog.component.tsx";
 import { SessionGroup } from "../session-group/session-group.component.tsx";
@@ -31,6 +32,7 @@ export function Sidebar({ open, onNewSession, onShowServer }: SidebarProps) {
 	const boards = useBoards();
 	const { createBoard } = useClientActions();
 	const navigate = useNavigate();
+	const { theme, toggleTheme } = useTheme();
 	const [creatingBoard, setCreatingBoard] = useState(false);
 
 	function createBoardFromPrompt(name: string) {
@@ -124,6 +126,16 @@ export function Sidebar({ open, onNewSession, onShowServer }: SidebarProps) {
 				<button type="button" className={styles.footerBtn} onClick={onShowServer}>
 					<span className="status-dot status-dot-connected" />
 					Server
+				</button>
+				<button
+					type="button"
+					className={styles.themeBtn}
+					onClick={toggleTheme}
+					title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+					aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+					data-theme-toggle
+				>
+					{theme === "dark" ? "☀" : "☾"}
 				</button>
 			</div>
 			<PromptDialog

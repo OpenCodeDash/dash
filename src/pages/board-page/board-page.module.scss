@@ -112,11 +112,11 @@
 .queueOn {
 	color: var(--accent);
 	border: 1px solid var(--accent);
-	background: rgba(108, 158, 248, 0.12);
+	background: var(--accent-soft);
 
 	&:hover {
 		color: var(--accent);
-		background: rgba(108, 158, 248, 0.2);
+		background: var(--accent-soft-strong);
 	}
 }
 

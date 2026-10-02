@@ -140,8 +140,29 @@ export async function run(suitesOut) {
 	await sleep(300);
 	s.check("Escape closes modal", await c.eval(`!document.querySelector('[role="dialog"]')`));
 
-	// 10. Mobile drawer
-	results("10. Mobile (390px)");
+	// 10. Theme toggle (light/dark)
+	results("10. Theme toggle");
+	const themeBefore = await c.eval(`document.documentElement.dataset.theme || null`);
+	const bgBefore = await c.eval(`getComputedStyle(document.body).backgroundColor`);
+	const themeBtnOk = await c.eval(`(function(){
+	  const b=document.querySelector('[data-theme-toggle]');
+	  if(!b) return false;
+	  b.click();
+	  return /Switch to (dark|light) theme/.test(b.getAttribute('aria-label'));
+	})()`);
+	await sleep(300);
+	const themeAfter = await c.eval(`document.documentElement.dataset.theme || null`);
+	const bgAfter = await c.eval(`getComputedStyle(document.body).backgroundColor`);
+	s.check("theme toggle button present + labelled", themeBtnOk);
+	s.check("theme toggle flips data-theme", themeBefore && themeAfter && themeBefore !== themeAfter, `${themeBefore} -> ${themeAfter}`);
+	s.check("theme toggle repaints the page", bgBefore !== bgAfter, `${bgBefore} -> ${bgAfter}`);
+	// Flip back so later checks run in the original theme.
+	await c.eval(`document.querySelector('[data-theme-toggle]')?.click()`);
+	await sleep(200);
+	s.check("theme restores on second toggle", (await c.eval(`document.documentElement.dataset.theme`)) === themeBefore);
+
+	// 11. Mobile drawer
+	results("11. Mobile (390px)");
 	await c.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
 	await sleep(800);
 	const menuBtn = await c.eval(`(function(){ const b=document.querySelector('button[aria-label="Open menu"]'); return b && getComputedStyle(b).display!=='none' && b.offsetParent!==null; })()`);
