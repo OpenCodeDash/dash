@@ -7,7 +7,6 @@
 .list {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	overflow: hidden;
@@ -23,8 +22,9 @@
 .row {
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	padding: 6px 8px;
+	gap: 8px;
+	padding: 5px 8px;
+	line-height: 1.35;
 	border-bottom: 1px solid var(--border);
 
 	&:last-child {
@@ -43,6 +43,8 @@
 	align-items: center;
 	gap: 8px;
 	text-align: left;
+	white-space: nowrap;
+	overflow: hidden;
 }
 
 .swatch {
@@ -55,12 +57,17 @@
 }
 
 .rowName {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	font-size: 13px;
 	font-weight: var(--weight-medium);
-	white-space: nowrap;
 }
 
 .rowDesc {
+	flex: 1 1 0;
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
