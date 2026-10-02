@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
 	BackdashError,
@@ -28,6 +28,7 @@ function TaskCard({
 	task,
 	column,
 	boardId,
+	taskNameById,
 	isDragSource,
 	onDragStartTask,
 	onDropOnTask,
@@ -37,6 +38,7 @@ function TaskCard({
 	task: Task;
 	column: Column;
 	boardId: string;
+	taskNameById: Map<number, string>;
 	isDragSource: boolean;
 	onDragStartTask: (task: Task, columnId: number) => void;
 	onDropOnTask: (taskId: number, columnId: number) => void;
@@ -52,7 +54,9 @@ function TaskCard({
 		task.tags.length > 0 ||
 		task.assignee !== null ||
 		task.estimate !== null ||
-		task.dueAt !== null;
+		task.dueAt !== null ||
+		task.dependsOn.length > 0 ||
+		task.dependents.length > 0;
 
 	function commitRename() {
 		setRenaming(false);
@@ -150,6 +154,26 @@ function TaskCard({
 					{task.assignee && <span className={styles.metaBadge}>@{task.assignee}</span>}
 					{task.estimate !== null && <span className={styles.metaBadge}>{task.estimate} pts</span>}
 					{task.dueAt && <span className={styles.metaBadge}>{formatDue(task.dueAt)}</span>}
+					{task.dependsOn.length > 0 && (
+						<span
+							className={`${styles.metaBadge} ${styles.depBadge}`}
+							title={`Depends on: ${task.dependsOn
+								.map((id) => taskNameById.get(id) ?? `#${id}`)
+								.join(", ")}`}
+						>
+							⛓ {task.dependsOn.length}
+						</span>
+					)}
+					{task.dependents.length > 0 && (
+						<span
+							className={`${styles.metaBadge} ${styles.depBadge}`}
+							title={`Blocks: ${task.dependents
+								.map((id) => taskNameById.get(id) ?? `#${id}`)
+								.join(", ")}`}
+						>
+							⇢ {task.dependents.length}
+						</span>
+					)}
 				</div>
 			)}
 			<div className={styles.taskMeta}>
@@ -183,6 +207,7 @@ function TaskCard({
 function ColumnCard({
 	column,
 	boardId,
+	taskNameById,
 	drag,
 	onColumnDragStart,
 	onColumnDrop,
@@ -193,6 +218,7 @@ function ColumnCard({
 }: {
 	column: Column;
 	boardId: string;
+	taskNameById: Map<number, string>;
 	drag: DragState;
 	onColumnDragStart: (id: number) => void;
 	onColumnDrop: (id: number) => void;
@@ -305,6 +331,7 @@ function ColumnCard({
 							task={task}
 							column={column}
 							boardId={boardId}
+							taskNameById={taskNameById}
 							isDragSource={drag?.kind === "task" && drag.id === task.id}
 							onDragStartTask={onTaskDragStart}
 							onDropOnTask={onDropOnTask}
@@ -361,6 +388,14 @@ export function BoardPage() {
 				.find((c) => c.id === editing.columnId)
 				?.tasks.find((t) => t.id === editing.taskId) ?? null
 		: null;
+
+	// id -> name across the whole board, so dependency badges can name their
+	// related tasks regardless of which column they live in
+	const taskNameById = useMemo(() => {
+		const map = new Map<number, string>();
+		board?.columns.forEach((c) => c.tasks.forEach((t) => map.set(t.id, t.name)));
+		return map;
+	}, [board]);
 
 	useEffect(() => {
 		client
@@ -508,6 +543,7 @@ export function BoardPage() {
 							key={column.id}
 							column={column}
 							boardId={board.id}
+							taskNameById={taskNameById}
 							drag={drag}
 							onColumnDragStart={onColumnDragStart}
 							onColumnDrop={onColumnDrop}
