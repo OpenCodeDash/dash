@@ -219,3 +219,66 @@
 	min-width: 0;
 	font-size: 13px;
 }
+
+.badges {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 6px;
+	margin-top: 6px;
+}
+
+.priority {
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	font-weight: var(--weight-semibold);
+	padding: 1px 7px;
+	border-radius: var(--radius-full);
+	border: 1px solid transparent;
+}
+
+.prio_low {
+	color: var(--text-dim);
+	border-color: var(--border-strong);
+}
+
+.prio_medium {
+	color: var(--accent);
+	border-color: var(--accent-line);
+	background: var(--accent-soft);
+}
+
+.prio_high {
+	color: var(--yellow);
+	border-color: var(--yellow-line);
+	background: var(--yellow-soft);
+}
+
+.prio_urgent {
+	color: var(--red);
+	border-color: var(--red-line);
+	background: var(--red-soft);
+}
+
+.tag {
+	font-size: 10px;
+	padding: 1px 7px;
+	border-radius: var(--radius-full);
+	border: 1px solid var(--border-strong);
+	color: var(--text-dim);
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.metaBadge {
+	font-size: 10px;
+	padding: 1px 7px;
+	border-radius: var(--radius-full);
+	border: 1px solid var(--border);
+	color: var(--text-faint);
+	white-space: nowrap;
+}
+
