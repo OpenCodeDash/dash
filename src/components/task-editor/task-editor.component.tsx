@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { useClientActions, useTags, type Task, type TaskPriority } from "react-backdash";
+import {
+	useBoard,
+	useClientActions,
+	useTags,
+	type Task,
+	type TaskPriority,
+} from "react-backdash";
 import { Modal } from "../modal/modal.component.tsx";
 import styles from "./task-editor.module.scss";
 
@@ -33,6 +39,7 @@ interface TaskEditorProps {
 export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 	const { updateTask } = useClientActions();
 	const tags = useTags(boardId);
+	const board = useBoard(boardId);
 	const [name, setName] = useState(task.name);
 	const [description, setDescription] = useState(task.description ?? "");
 	const [priority, setPriority] = useState<TaskPriority | "">(task.priority ?? "");
@@ -40,10 +47,21 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 	const [assignee, setAssignee] = useState(task.assignee ?? "");
 	const [dueAt, setDueAt] = useState(toLocalInput(task.dueAt));
 	const [tagIds, setTagIds] = useState<number[]>(task.tags.map((t) => t.id));
+	const [dependsOn, setDependsOn] = useState<number[]>(task.dependsOn ?? []);
 
 	function toggleTag(id: number) {
 		setTagIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 	}
+
+	function toggleDep(id: number) {
+		setDependsOn((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+	}
+
+	// Every other task on the board, as a dependency candidate (labelled with
+	// its column so a same-named task is unambiguous)
+	const depCandidates = (board?.columns ?? [])
+		.flatMap((column) => column.tasks.map((t) => ({ id: t.id, name: t.name, column: column.name })))
+		.filter((c) => c.id !== task.id);
 
 	function submit(e: React.FormEvent) {
 		e.preventDefault();
@@ -57,6 +75,7 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 			assignee: assignee.trim() || null,
 			dueAt: fromLocalInput(dueAt),
 			tagIds,
+			dependsOn,
 		})
 			.then(onClose)
 			.catch(() => undefined);
@@ -179,6 +198,30 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 											style={tag.color ? { background: tag.color } : undefined}
 										/>
 										{tag.name}
+									</button>
+								);
+							})}
+						</div>
+					)}
+				</div>
+				<div className={styles.field}>
+					<span className={styles.label}>Depends on</span>
+					{depCandidates.length === 0 ? (
+						<p className={styles.hint}>No other tasks to depend on yet.</p>
+					) : (
+						<div className={styles.tags}>
+							{depCandidates.map((c) => {
+								const active = dependsOn.includes(c.id);
+								return (
+									<button
+										key={c.id}
+										type="button"
+										className={`${styles.tagToggle} ${active ? styles.tagOn : ""}`}
+										aria-pressed={active}
+										title={`in ${c.column}`}
+										onClick={() => toggleDep(c.id)}
+									>
+										{c.name}
 									</button>
 								);
 							})}

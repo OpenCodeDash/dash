@@ -282,3 +282,9 @@
 	white-space: nowrap;
 }
 
+.depBadge {
+	color: var(--accent);
+	border-color: var(--accent-line);
+	background: var(--accent-soft);
+}
+
