@@ -9,12 +9,20 @@ import {
 	type Task,
 } from "react-backdash";
 import { ConfirmDialog } from "../../components/confirm-dialog/confirm-dialog.component.tsx";
+import { TagManager } from "../../components/tag-manager/tag-manager.component.tsx";
+import { TaskEditor } from "../../components/task-editor/task-editor.component.tsx";
 import styles from "./board-page.module.scss";
 
 type DragState =
 	| { kind: "column"; id: number }
 	| { kind: "task"; id: number; fromColumnId: number }
 	| null;
+
+function formatDue(iso: string): string {
+	const date = new Date(iso);
+	if (Number.isNaN(date.getTime())) return "";
+	return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
 
 function TaskCard({
 	task,
@@ -24,6 +32,7 @@ function TaskCard({
 	onDragStartTask,
 	onDropOnTask,
 	onDragEnd,
+	onEdit,
 }: {
 	task: Task;
 	column: Column;
@@ -32,10 +41,18 @@ function TaskCard({
 	onDragStartTask: (task: Task, columnId: number) => void;
 	onDropOnTask: (taskId: number, columnId: number) => void;
 	onDragEnd: () => void;
+	onEdit: (task: Task) => void;
 }) {
 	const { updateTask, deleteTask, claimTask, releaseTask } = useClientActions();
 	const [renaming, setRenaming] = useState(false);
 	const [title, setTitle] = useState("");
+
+	const hasBadges =
+		task.priority !== null ||
+		task.tags.length > 0 ||
+		task.assignee !== null ||
+		task.estimate !== null ||
+		task.dueAt !== null;
 
 	function commitRename() {
 		setRenaming(false);
@@ -98,11 +115,43 @@ function TaskCard({
 						{task.name}
 					</span>
 				)}
+				<button
+					type="button"
+					className="icon-btn"
+					title="Edit task"
+					onClick={(e) => {
+						e.stopPropagation();
+						onEdit(task);
+					}}
+				>
+					✎
+				</button>
 				<button type="button" className="icon-btn" title="Delete task" onClick={() => void deleteTask(boardId, column.id, task.id).catch(() => undefined)}>
 					✕
 				</button>
 			</div>
 			{task.description && <div className={styles.taskDesc}>{task.description}</div>}
+			{hasBadges && (
+				<div className={styles.badges}>
+					{task.priority && (
+						<span className={`${styles.priority} ${styles[`prio_${task.priority}`]}`}>
+							{task.priority}
+						</span>
+					)}
+					{task.tags.map((tag) => (
+						<span
+							key={tag.id}
+							className={styles.tag}
+							style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+						>
+							{tag.name}
+						</span>
+					))}
+					{task.assignee && <span className={styles.metaBadge}>@{task.assignee}</span>}
+					{task.estimate !== null && <span className={styles.metaBadge}>{task.estimate} pts</span>}
+					{task.dueAt && <span className={styles.metaBadge}>{formatDue(task.dueAt)}</span>}
+				</div>
+			)}
 			<div className={styles.taskMeta}>
 				{task.claimedBy ? (
 					<>
@@ -140,6 +189,7 @@ function ColumnCard({
 	onTaskDragStart,
 	onDropOnTask,
 	onDragEnd,
+	onEdit,
 }: {
 	column: Column;
 	boardId: string;
@@ -149,6 +199,7 @@ function ColumnCard({
 	onTaskDragStart: (task: Task, columnId: number) => void;
 	onDropOnTask: (taskId: number, columnId: number) => void;
 	onDragEnd: () => void;
+	onEdit: (task: Task) => void;
 }) {
 	const { updateColumn, deleteColumn, createTask } = useClientActions();
 	const [renaming, setRenaming] = useState(false);
@@ -258,6 +309,7 @@ function ColumnCard({
 							onDragStartTask={onTaskDragStart}
 							onDropOnTask={onDropOnTask}
 							onDragEnd={onDragEnd}
+							onEdit={onEdit}
 						/>
 					))}
 					{column.tasks.length === 0 && <div className={styles.empty}>No tasks</div>}
@@ -299,7 +351,16 @@ export function BoardPage() {
 	const [name, setName] = useState("");
 	const [drag, setDrag] = useState<DragState>(null);
 	const [confirming, setConfirming] = useState(false);
+	const [editing, setEditing] = useState<{ columnId: number; taskId: number } | null>(null);
+	const [tagsOpen, setTagsOpen] = useState(false);
 	const notFound = missingId === boardId;
+
+	// Resolve the editor's task from the live board so it stays fresh while open
+	const editingTask = editing
+		? board?.columns
+				.find((c) => c.id === editing.columnId)
+				?.tasks.find((t) => t.id === editing.taskId) ?? null
+		: null;
 
 	useEffect(() => {
 		client
@@ -425,6 +486,14 @@ export function BoardPage() {
 					<h1 className={styles.title}>{board.name}</h1>
 					<button
 						type="button"
+						className="btn btn-ghost"
+						title="Create and edit task tags"
+						onClick={() => setTagsOpen(true)}
+					>
+						Tags
+					</button>
+					<button
+						type="button"
 						className="icon-btn"
 						title="Delete board"
 						onClick={() => setConfirming(true)}
@@ -445,6 +514,7 @@ export function BoardPage() {
 							onTaskDragStart={onTaskDragStart}
 							onDropOnTask={onDropOnTask}
 							onDragEnd={() => setDrag(null)}
+							onEdit={(task) => setEditing({ columnId: task.columnId, taskId: task.id })}
 						/>
 					))}
 					{board.columns.length === 0 && (
@@ -472,6 +542,18 @@ export function BoardPage() {
 				onConfirm={deleteBoardConfirmed}
 				onCancel={() => setConfirming(false)}
 			/>
+			{tagsOpen && (
+				<TagManager boardId={board.id} open onClose={() => setTagsOpen(false)} />
+			)}
+			{editingTask && (
+				<TaskEditor
+					key={editingTask.id}
+					boardId={board.id}
+					task={editingTask}
+					open
+					onClose={() => setEditing(null)}
+				/>
+			)}
 		</div>
 	);
 }
