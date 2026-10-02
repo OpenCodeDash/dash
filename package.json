@@ -19,7 +19,9 @@
 		"react-markdown": "^10.1.0",
 		"react-opencode": "github:eyezahhhh/react-opencode#95fb2f9565a8f4c546cde1503a9c6628b0293fae",
 		"react-router-dom": "^7.18.4",
-		"react-virtuoso": "^4.18.16"
+		"react-virtuoso": "^4.18.16",
+		"remark-breaks": "^4.0.0",
+		"remark-gfm": "^4.0.1"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
