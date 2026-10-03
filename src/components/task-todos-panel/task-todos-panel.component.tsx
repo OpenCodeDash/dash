@@ -36,7 +36,7 @@ export function TaskTodosPanel({ boardId, task }: { boardId: string; task: Task 
 
 	// Read the live task (kept current by the store); each edit replaces the
 	// whole checklist, matching the API contract.
-	const todos = task.todos;
+	const todos = task.todos ?? [];
 	const done = todos.filter((t) => t.status === "completed").length;
 
 	function save(next: TaskTodo[]) {
