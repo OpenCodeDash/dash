@@ -1,0 +1,74 @@
+.root {
+	position: relative;
+}
+
+// The trigger reuses the global `.select` class for its base look (padding,
+// border, radius, background, colour, font, max-width) so it matches the native
+// selects it replaces. These rules only add what a <button> trigger needs on top.
+.trigger {
+	appearance: none;
+	width: 100%;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+	white-space: nowrap;
+	text-align: left;
+
+	&:focus {
+		border-color: var(--accent);
+		outline: none;
+	}
+}
+
+.value {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.caret {
+	flex-shrink: 0;
+	margin-left: auto;
+	color: var(--text-faint);
+	font-size: 10px;
+}
+
+.list {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	margin-top: 4px;
+	min-width: 100%;
+	max-width: 280px;
+	max-height: 288px;
+	overflow-y: auto;
+	z-index: 30;
+	padding: 4px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	background: var(--bg-elevated);
+	box-shadow: var(--shadow-md);
+}
+
+.option {
+	padding: 5px 8px;
+	border-radius: var(--radius-sm);
+	color: var(--text-dim);
+	font-size: 12px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	cursor: pointer;
+}
+
+.optionActive {
+	background: var(--bg-hover);
+	color: var(--text);
+}
+
+.optionSelected {
+	color: var(--accent);
+	font-weight: var(--weight-semibold);
+}
