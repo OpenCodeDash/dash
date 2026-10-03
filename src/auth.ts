@@ -75,3 +75,63 @@ export async function validateToken(token: string): Promise<AuthAccount | null> 
 		return null;
 	}
 }
+
+/**
+ * Issue an authenticated backdash request and parse the JSON body. Throws with
+ * the server-provided message on a non-2xx response so callers can surface it.
+ */
+async function authRequest<T>(
+	token: string,
+	path: string,
+	init: RequestInit = {}
+): Promise<T> {
+	const res = await fetch(`${BACKDASH_URL}${path}`, {
+		...init,
+		headers: {
+			...(init.body ? { "Content-Type": "application/json" } : {}),
+			...authHeaders(token),
+		},
+	});
+	const data: unknown = await res.json().catch(() => null);
+	if (!res.ok) throw new Error(messageFrom(data, res.status));
+	return data as T;
+}
+
+/** The account the bearer token belongs to. */
+export function fetchMe(token: string): Promise<AuthAccount> {
+	return authRequest<AuthAccount>(token, "/auth/me");
+}
+
+/** Admin-only: provision a user account. The token is returned once. */
+export function createUser(
+	token: string,
+	name: string,
+	password: string,
+	isAdmin: boolean
+): Promise<AuthSession> {
+	return authRequest<AuthSession>(token, "/auth/users", {
+		method: "POST",
+		body: JSON.stringify({ name, password, isAdmin }),
+	});
+}
+
+/** Admin-only: provision a service account. The token is returned once. */
+export function createServiceAccount(
+	token: string,
+	name: string
+): Promise<AuthSession> {
+	return authRequest<AuthSession>(token, "/auth/service", {
+		method: "POST",
+		body: JSON.stringify({ name }),
+	});
+}
+
+/** Admin-only: list all service accounts. */
+export function listServiceAccounts(token: string): Promise<AuthAccount[]> {
+	return authRequest<AuthAccount[]>(token, "/auth/service");
+}
+
+/** Admin-only: revoke a service account. */
+export function revokeServiceAccount(token: string, id: string): Promise<void> {
+	return authRequest<void>(token, `/auth/service/${id}`, { method: "DELETE" });
+}
