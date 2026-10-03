@@ -124,36 +124,43 @@ export function Sidebar({ open, onNewSession, onShowServer, onSignOut }: Sidebar
 				{boards.length === 0 && <div className={styles.empty}>No boards yet</div>}
 			</div>
 			<div className={styles.footer}>
-				<button type="button" className={styles.footerBtn} onClick={onShowServer}>
-					<span className="status-dot status-dot-connected" />
-					Server
-				</button>
-				<button
-					type="button"
-					className={styles.footerBtn}
-					onClick={() => navigate("/settings")}
-					title="Settings"
-				>
-					Settings
-				</button>
-				<button
-					type="button"
-					className={styles.footerBtn}
-					onClick={onSignOut}
-					title="Sign out of backdash"
-				>
-					Sign out
-				</button>
-				<button
-					type="button"
-					className={styles.themeBtn}
-					onClick={toggleTheme}
-					title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-					aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-					data-theme-toggle
-				>
-					{theme === "dark" ? "☀" : "☾"}
-				</button>
+				<div className={styles.footerRow}>
+					<button type="button" className={styles.footerBtn} onClick={onShowServer}>
+						<span
+							className={`status-dot ${connected ? "status-dot-on" : "status-dot-pending"}`}
+							aria-hidden="true"
+						/>
+						Server
+					</button>
+					<button
+						type="button"
+						className={styles.themeBtn}
+						onClick={toggleTheme}
+						title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+						aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+						data-theme-toggle
+					>
+						{theme === "dark" ? "☀" : "☾"}
+					</button>
+				</div>
+				<div className={styles.footerRow}>
+					<button
+						type="button"
+						className={styles.footerBtn}
+						onClick={() => navigate("/settings")}
+						title="Settings"
+					>
+						Settings
+					</button>
+					<button
+						type="button"
+						className={styles.footerBtn}
+						onClick={onSignOut}
+						title="Sign out of backdash"
+					>
+						Sign out
+					</button>
+				</div>
 			</div>
 			<PromptDialog
 				open={creatingBoard}

@@ -8,6 +8,7 @@ import {
 	type TaskTodo,
 	type TaskTodoStatus,
 } from "react-backdash";
+import { Dropdown } from "../dropdown/dropdown.component.tsx";
 import { Modal } from "../modal/modal.component.tsx";
 import styles from "./task-editor.module.scss";
 
@@ -262,18 +263,15 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 				<div className={styles.grid}>
 					<label className={styles.field}>
 						<span className={styles.label}>Priority</span>
-						<select
+						<Dropdown
 							value={priority}
-							onChange={(e) => setPriority(e.target.value as TaskPriority | "")}
-							aria-label="Task priority"
-						>
-							<option value="">None</option>
-							{PRIORITIES.map((p) => (
-								<option key={p} value={p}>
-									{p}
-								</option>
-							))}
-						</select>
+							onChange={(v) => setPriority(v as TaskPriority | "")}
+							ariaLabel="Task priority"
+							options={[
+								{ value: "", label: "None" },
+								...PRIORITIES.map((p) => ({ value: p, label: p })),
+							]}
+						/>
 					</label>
 
 					<label className={styles.field}>
