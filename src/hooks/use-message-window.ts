@@ -5,6 +5,10 @@ import { useOpenCode, useStore, type Message, type Part } from "react-opencode";
 // the newest `limit` messages plus an `X-Next-Cursor` header; passing that opaque
 // cursor back as `before` yields the next older chunk.
 const CHUNK = 60;
+// When the page becomes visible again we refetch the newest chunk to pick up
+// messages produced while it was suspended (laptop closed / app backgrounded).
+// Resume events fire often (focus, clicks), so cap how frequently we refetch.
+const REFRESH_THROTTLE_MS = 3500;
 const EMPTY_MESSAGES: Message[] = [];
 
 interface Entry {
@@ -42,6 +46,11 @@ export function useMessageWindow(sessionID: string): MessageWindow {
 	const [hasMore, setHasMore] = useState(primed ? cached!.hasMore : false);
 	const cursorRef = useRef<string | null>(primed ? cached!.cursor : null);
 	const loadingRef = useRef(false);
+	// Latest `loaded` without re-creating the callbacks that read it: a resume
+	// refresh is only meaningful once the initial chunk has landed.
+	const loadedRef = useRef(loaded);
+	// Throttle for resume refreshes (see REFRESH_THROTTLE_MS).
+	const lastRefreshRef = useRef(0);
 
 	const fetchPage = useCallback(
 		async (before: string | null) => {
@@ -76,6 +85,50 @@ export function useMessageWindow(sessionID: string): MessageWindow {
 			cancelled = true;
 		};
 	}, [client, sessionID, fetchPage, primed]);
+
+	// Keep `loadedRef` current so the resume-refresh callbacks (stable across
+	// renders) can read the latest value without re-subscribing on every change.
+	useEffect(() => {
+		loadedRef.current = loaded;
+	}, [loaded]);
+
+	// Re-fetch the newest chunk and merge it in, without touching `loaded`,
+	// `hasMore`, or the "load older" cursor — so we only ever ADD anything
+	// produced since the last load and never lose older chunks.
+	const refreshNewest = useCallback(async () => {
+		if (!loadedRef.current || loadingRef.current) return;
+		const now = Date.now();
+		if (now - lastRefreshRef.current < REFRESH_THROTTLE_MS) return;
+		lastRefreshRef.current = now;
+		loadingRef.current = true;
+		try {
+			const { entries } = await fetchPage(null);
+			client.store.setMessages(sessionID, entries);
+		} catch {
+			// A missed refresh is not fatal: the next resume or a live event catches up.
+		} finally {
+			loadingRef.current = false;
+		}
+	}, [client, sessionID, fetchPage]);
+
+	// Catch up when the page resumes. `visibilitychange` covers tab/OS suspend,
+	// `pageshow` covers back/forward from the bfcache, and `focus` covers the
+	// remaining cases (e.g. returning to the app). Each is throttled above.
+	useEffect(() => {
+		const onVisibilityChange = () => {
+			if (document.visibilityState === "visible") void refreshNewest();
+		};
+		const onPageShow = () => void refreshNewest();
+		const onFocus = () => void refreshNewest();
+		document.addEventListener("visibilitychange", onVisibilityChange);
+		window.addEventListener("pageshow", onPageShow);
+		window.addEventListener("focus", onFocus);
+		return () => {
+			document.removeEventListener("visibilitychange", onVisibilityChange);
+			window.removeEventListener("pageshow", onPageShow);
+			window.removeEventListener("focus", onFocus);
+		};
+	}, [refreshNewest]);
 
 	const loadOlder = useCallback(async (): Promise<number> => {
 		const before = cursorRef.current;

@@ -128,6 +128,34 @@ export async function run() {
 		s.check("two tasks created in In Progress", (tasks["In Progress"] || []).length === 2, JSON.stringify(tasks));
 		s.check("server order is [Alpha, Beta]", JSON.stringify(tasks["In Progress"] || []) === JSON.stringify(["Alpha", "Beta"]), JSON.stringify(tasks["In Progress"] || []));
 
+		// 3b. A long multi-word title wraps to multiple lines instead of being
+		//     clipped with an ellipsis (the title now sits in its own full-width
+		//     row below the handle/actions row). Created in Done so the exact
+		//     [Alpha, Beta] order assertions above are untouched.
+		results("3b. Long title wraps");
+		await addTask(c, "Done", "Long multi word title that wraps across several lines instead of truncating");
+		await sleep(500);
+		// whiteSpace must not be nowrap, a wrapping policy must be set, and the
+		// rendered title must be taller than one line. Single-line height is
+		// measured with a hidden nowrap probe sharing the title's own class,
+		// since computed lineHeight is "normal" (not a px value).
+		const wrap = await c.eval(`(() => {
+		const el=[...document.querySelectorAll('[data-task-name]')].find(e=>e.textContent.includes("wraps across several lines"));
+		if(!el) return {ok:false, err:"title element not found"};
+		const cs=getComputedStyle(el);
+		const wrapEnabled = cs.whiteSpace !== "nowrap" && (["anywhere","break-word","break-words"].includes(cs.overflowWrap) || ["break-word","break-all"].includes(cs.wordBreak));
+		const probe=document.createElement("span");
+		probe.style.cssText="position:absolute;visibility:hidden;white-space:nowrap;";
+		probe.className=el.className;
+		probe.textContent="x";
+		el.appendChild(probe);
+		const single=probe.offsetHeight;
+		probe.remove();
+		const multiLine = el.offsetHeight > single * 1.5;
+		return {ok: wrapEnabled && multiLine, whiteSpace: cs.whiteSpace, overflowWrap: cs.overflowWrap, wordBreak: cs.wordBreak, height: el.offsetHeight, singleLine: single};
+	})()`);
+		s.check("long title wraps to multiple lines", wrap.ok, JSON.stringify(wrap));
+
 		// 4. Rename Alpha -> "Alpha 2" via double-click
 		results("4. Rename task");
 		const alphaId = await c.eval(`(() => { const el=${TASKS}.find(t=>t.textContent.includes("Alpha")); return el ? el.dataset.taskId : null; })()`);
@@ -221,6 +249,31 @@ export async function run() {
 		delta = (await serverBoard(boardId)).columns.flatMap((col) => col.tasks).find((t) => t.name === "Delta");
 		s.check("first todo now completed", !!delta && delta.todos?.[0]?.status === "completed", JSON.stringify(delta?.todos ?? null));
 		s.check("progress badge shows 1/2", await c.eval(`!!${TASKS}.find(t=>t.textContent.includes("Delta"))?.textContent.includes("1/2")`));
+
+		// 9b. Custom Priority dropdown (replaces the native <select> in the editor).
+		//      Static options (None/low/medium/high/urgent), so this exercises the
+		//      new component with no model. Drives Gamma (from section 8, in Todo).
+		results("9b. Priority dropdown (custom select replacement)");
+		s.check("editor opened for Gamma", await c.eval(openEditor("Gamma")));
+		await sleep(300);
+		s.check("priority trigger is a <button>", await c.eval(`!!document.querySelector('button[aria-label="Task priority"]')`));
+		s.check("no native <select> remains for priority", await c.eval(`!document.querySelector('select[aria-label="Task priority"]')`));
+		s.check("opens on keyboard (ArrowDown)", await c.eval(`(() => { const b=document.querySelector('button[aria-label="Task priority"]'); if(!b) return false; b.focus(); b.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true})); return true; })()`));
+		await sleep(150);
+		s.check("keyboard-open shows a listbox", await c.eval(`!!document.querySelector('[role="listbox"]')`));
+		s.check("Escape closes the listbox", await c.eval(`(() => { const b=document.querySelector('button[aria-label="Task priority"]'); if(!b) return false; b.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})); return true; })()`));
+		await sleep(150);
+		s.check("listbox gone after Escape", await c.eval(`!document.querySelector('[role="listbox"]')`));
+		s.check("opens on click", await c.eval(`(() => { const b=document.querySelector('button[aria-label="Task priority"]'); if(!b) return false; b.click(); return true; })()`));
+		await sleep(150);
+		s.check("listbox exposes every priority", await c.eval(`(() => { const lb=document.querySelector('[role="listbox"]'); if(!lb) return false; const v=[...lb.querySelectorAll('[role="option"]')].map(o=>o.getAttribute('data-value')); return v.includes('') && v.includes('low') && v.includes('medium') && v.includes('high') && v.includes('urgent'); })()`));
+		s.check("clicking 'high' closes the listbox", await c.eval(`(() => { const o=document.querySelector('[role="listbox"] [data-value="high"]'); if(!o) return false; o.click(); return true; })()`));
+		await sleep(150);
+		s.check("listbox closed after selecting 'high'", await c.eval(`!document.querySelector('[role="listbox"]')`));
+		s.check("editor saved (priority)", await c.eval(saveEditor));
+		await sleep(500);
+		const gamma = (await serverBoard(boardId)).columns.flatMap((col) => col.tasks).find((t) => t.name === "Gamma");
+		s.check("server persisted priority 'high'", !!gamma && gamma.priority === "high", JSON.stringify(gamma?.priority ?? null));
 
 		// 10. Delete the board via the API; the sidebar must drop it over SSE.
 		results("10. Delete board");

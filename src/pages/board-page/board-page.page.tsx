@@ -103,48 +103,50 @@ function TaskCard({
 				<span className={styles.handle} title="Drag task">
 					⠿
 				</span>
-				{renaming ? (
-					<input
-						className={styles.rename}
-						value={title}
-						autoFocus
-						draggable={false}
-						onClick={(e) => e.stopPropagation()}
-						onChange={(e) => setTitle(e.target.value)}
-						onBlur={commitRename}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") commitRename();
-							if (e.key === "Escape") setRenaming(false);
+				<div className={styles.taskActions}>
+					<button
+						type="button"
+						className="icon-btn"
+						title="Edit task"
+						onClick={(e) => {
+							e.stopPropagation();
+							onEdit(task);
 						}}
-					/>
-				) : (
-					<span
-						className={styles.taskName}
-						data-task-name={task.id}
-						onDoubleClick={() => {
-							setTitle(task.name);
-							setRenaming(true);
-						}}
-						title="Double-click to rename"
 					>
-						{task.name}
-					</span>
-				)}
-				<button
-					type="button"
-					className="icon-btn"
-					title="Edit task"
-					onClick={(e) => {
-						e.stopPropagation();
-						onEdit(task);
-					}}
-				>
-					✎
-				</button>
-				<button type="button" className="icon-btn" title="Delete task" onClick={() => void deleteTask(boardId, column.id, task.id).catch(() => undefined)}>
-					✕
-				</button>
+						✎
+					</button>
+					<button type="button" className="icon-btn" title="Delete task" onClick={() => void deleteTask(boardId, column.id, task.id).catch(() => undefined)}>
+						✕
+					</button>
+				</div>
 			</div>
+			{renaming ? (
+				<input
+					className={styles.rename}
+					value={title}
+					autoFocus
+					draggable={false}
+					onClick={(e) => e.stopPropagation()}
+					onChange={(e) => setTitle(e.target.value)}
+					onBlur={commitRename}
+					onKeyDown={(e) => {
+						if (e.key === "Enter") commitRename();
+						if (e.key === "Escape") setRenaming(false);
+					}}
+				/>
+			) : (
+				<span
+					className={styles.taskName}
+					data-task-name={task.id}
+					onDoubleClick={() => {
+						setTitle(task.name);
+						setRenaming(true);
+					}}
+					title="Double-click to rename"
+				>
+					{task.name}
+				</span>
+			)}
 			{task.description && <div className={styles.taskDesc}>{task.description}</div>}
 			{hasBadges && (
 				<div className={styles.badges}>

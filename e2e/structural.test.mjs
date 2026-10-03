@@ -179,6 +179,56 @@ export async function run(suitesOut) {
 	await c.send("Emulation.clearDeviceMetricsOverride");
 	await sleep(300);
 
+	// 12. Question overflow contract (short viewport): the questions container
+	// must be a bounded, internally-scrolling region so many questions never push
+	// the composer below the fold. Real questions are model-backed and not
+	// deterministic in e2e, so assert the compiled CSS contract directly: locate
+	// the container's CSS-module rule (the only rule pairing overflow-y
+	// auto/scroll with a dvh max-height) and confirm a probe element carrying that
+	// class resolves to a bounded scrolling box at a short viewport.
+	results("12. Question overflow contract (short viewport)");
+	await c.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 520, deviceScaleFactor: 2, mobile: true });
+	await sleep(500);
+	const qOverflow = await c.eval(`(function(){
+	  var cls = null, ruleText = "";
+	  for (var si = 0; si < document.styleSheets.length; si++) {
+	    var rules; try { rules = document.styleSheets[si].cssRules; } catch (e) { continue; }
+	    if (!rules) continue;
+	    for (var ri = 0; ri < rules.length; ri++) {
+	      var r = rules[ri];
+	      if (r.style && /overflow-y\\s*:\\s*(auto|scroll)/.test(r.style.cssText) && /max-height\\s*:[^;]*dvh/.test(r.style.cssText)) {
+	        var m = (r.selectorText || "").match(/^\\s*\\.[A-Za-z0-9_-]+/);
+	        if (m) { cls = m[0].trim().slice(1); ruleText = r.style.cssText; }
+	      }
+	    }
+	  }
+	  if (!cls) return { found: false, cls: null };
+	  var probe = document.createElement("div");
+	  probe.className = cls;
+	  for (var i = 0; i < 8; i++) { var d = document.createElement("div"); d.style.flex = "0 0 auto"; d.style.height = "300px"; probe.appendChild(d); }
+	  document.body.appendChild(probe);
+	  var cs = getComputedStyle(probe);
+	  var mhMatch = ruleText.match(/max-height\\s*:\\s*([^;]+);/);
+	  var out = {
+	    found: true, cls: cls, overflowY: cs.overflowY, computedMaxHeight: cs.maxHeight,
+	    ruleMaxHeight: mhMatch ? mhMatch[1].trim() : null, clientH: probe.clientHeight, scrollH: probe.scrollHeight
+	  };
+	  probe.remove();
+	  return out;
+	})()`);
+	const qPass =
+		qOverflow.found &&
+		(qOverflow.overflowY === "auto" || qOverflow.overflowY === "scroll") &&
+		qOverflow.computedMaxHeight !== "none" &&
+		/dvh/.test(qOverflow.ruleMaxHeight || "");
+	s.check(
+		"question cards are a bounded scrolling region (overflow-y + dvh max-height)",
+		qPass,
+		JSON.stringify(qOverflow)
+	);
+	await c.send("Emulation.clearDeviceMetricsOverride");
+	await sleep(200);
+
 	s.check("no uncaught exceptions during structural suite", exc.length === 0, exc.slice(0, 3).join(" | "));
 
 	await c.close();
