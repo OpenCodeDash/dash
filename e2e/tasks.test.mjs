@@ -73,6 +73,25 @@ async function serverTasks(boardId) {
 	return out;
 }
 
+// Full board (all tasks, all columns) straight from the server.
+async function serverBoard(boardId) {
+	return await authFetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json());
+}
+
+const openEditor = (name) =>
+	`(() => { const el=${TASKS}.find(t=>t.textContent.includes(${JSON.stringify(name)})); if(!el) return false; el.querySelector('[title="Edit task"]').click(); return true; })()`;
+
+// Click the Add button of the editor's "New todo" form (the input's own form).
+const clickEditorTodoAdd = `(() => { const i=document.querySelector('input[aria-label="New todo"]'); if(!i) return false; const b=i.closest("form").querySelector('button[type="submit"]'); if(!b||b.disabled) return false; b.click(); return true; })()`;
+
+// Submit the whole editor form (the footer Save button, bound via form="task-editor-form").
+const saveEditor = `(() => { const b=document.querySelector('button[form="task-editor-form"]'); if(!b) return false; b.click(); return true; })()`;
+
+// Click the first editor todo status button whose current label is `label`
+// (labels advance pending -> in progress -> done as it is cycled).
+const clickFirstStatus = (label) =>
+	`(() => { const b=document.querySelector(${JSON.stringify(`[aria-label="${label}"]`)}); if(!b) return false; b.click(); return true; })()`;
+
 export async function run() {
 	const s = new Suite("tasks");
 	await deleteBoardsNamed(BOARD); // idempotent start: clear leftovers from a failed run
@@ -174,8 +193,37 @@ export async function run() {
 		const g2 = (await authFetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json())).columns.find((c) => c.name === "Todo").tasks.find((t) => t.name === "Gamma");
 		s.check("task released (claimedBy cleared)", !!g2 && !g2.claimedBy, JSON.stringify(g2?.claimedBy ?? null));
 
-		// 9. Delete the board via the API; the sidebar must drop it over SSE.
-		results("9. Delete board");
+		// 9. Task todos: add two via the editor, verify the server persisted them
+		//    and the card shows a progress badge; then complete one and re-verify.
+		results("9. Task todos (editor + badge)");
+		await addTask(c, "In Progress", "Delta");
+		await sleep(400);
+		s.check("editor opened for Delta", await c.eval(openEditor("Delta")));
+		await sleep(300);
+		await c.eval(typeSel('input[aria-label="New todo"]', "first step"));
+		s.check("todo 1 added to editor", await c.eval(clickEditorTodoAdd));
+		await c.eval(typeSel('input[aria-label="New todo"]', "second step"));
+		s.check("todo 2 added to editor", await c.eval(clickEditorTodoAdd));
+		await sleep(200);
+		s.check("editor saved (todos)", await c.eval(saveEditor));
+		await sleep(500);
+		let delta = (await serverBoard(boardId)).columns.flatMap((col) => col.tasks).find((t) => t.name === "Delta");
+		s.check("server persisted 2 todos", !!delta && delta.todos?.length === 2, JSON.stringify(delta?.todos ?? null));
+		s.check("progress badge shows 0/2", await c.eval(`!!${TASKS}.find(t=>t.textContent.includes("Delta"))?.textContent.includes("0/2")`));
+
+		s.check("editor reopened for Delta", await c.eval(openEditor("Delta")));
+		await sleep(300);
+		s.check("todo 1 -> in progress", await c.eval(clickFirstStatus("Pending — click to mark in progress")));
+		s.check("todo 1 -> completed", await c.eval(clickFirstStatus("In progress — click to mark done")));
+		await sleep(150);
+		s.check("editor saved (toggle)", await c.eval(saveEditor));
+		await sleep(500);
+		delta = (await serverBoard(boardId)).columns.flatMap((col) => col.tasks).find((t) => t.name === "Delta");
+		s.check("first todo now completed", !!delta && delta.todos?.[0]?.status === "completed", JSON.stringify(delta?.todos ?? null));
+		s.check("progress badge shows 1/2", await c.eval(`!!${TASKS}.find(t=>t.textContent.includes("Delta"))?.textContent.includes("1/2")`));
+
+		// 10. Delete the board via the API; the sidebar must drop it over SSE.
+		results("10. Delete board");
 		await c.send("Page.navigate", { url: APP_URL + "/" });
 		await sleep(400);
 		const del = await authFetch(`${BOARD_URL}/kanban/${boardId}`, { method: "DELETE" });
