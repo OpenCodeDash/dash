@@ -1,6 +1,6 @@
 // Orchestrator for the headless e2e suite.
 //
-//   node e2e/run.mjs            structural + lifecycle + subagent + bench + boards + tasks
+//   node e2e/run.mjs            structural + lifecycle + subagent + session-refresh + bench + boards + tasks
 //   node e2e/run.mjs --with-model   also run model-backed checks (needs a working model)
 //
 // Prereqs (see README.md): opencode server on :4096, Vite dev server on :5173,
@@ -11,6 +11,7 @@ import { API_URL, BOARD_URL } from "./lib.mjs";
 import { run as runStructural } from "./structural.test.mjs";
 import { run as runLifecycle } from "./lifecycle.test.mjs";
 import { run as runSubagent } from "./subagent.test.mjs";
+import { run as runSessionRefresh } from "./session-refresh.test.mjs";
 import { run as runBench } from "./bench.test.mjs";
 import { run as runBoards } from "./boards.test.mjs";
 import { run as runTasks } from "./tasks.test.mjs";
@@ -46,6 +47,7 @@ const failures = [];
 if (!(await runSuite("structural", runStructural))) failures.push("structural");
 if (!(await runSuite("lifecycle", runLifecycle))) failures.push("lifecycle");
 if (!(await runSuite("subagent", runSubagent))) failures.push("subagent");
+if (!(await runSuite("session-refresh", runSessionRefresh))) failures.push("session-refresh");
 await runBench();
 if (boardsOk) {
 	if (!(await runSuite("boards", runBoards))) failures.push("boards");
