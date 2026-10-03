@@ -288,3 +288,14 @@
 	background: var(--accent-soft);
 }
 
+.todosBadge {
+	color: var(--text-dim);
+	border-color: var(--border-strong);
+}
+
+.todosDone {
+	color: var(--green);
+	border-color: var(--green);
+	background: var(--green-soft);
+}
+

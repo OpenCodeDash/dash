@@ -5,11 +5,32 @@ import {
 	useTags,
 	type Task,
 	type TaskPriority,
+	type TaskTodo,
+	type TaskTodoStatus,
 } from "react-backdash";
 import { Modal } from "../modal/modal.component.tsx";
 import styles from "./task-editor.module.scss";
 
 const PRIORITIES: TaskPriority[] = ["low", "medium", "high", "urgent"];
+
+// Clicking a status advances it in this cycle: pending → in progress → done.
+const NEXT_STATUS: Record<TaskTodoStatus, TaskTodoStatus> = {
+	pending: "in_progress",
+	in_progress: "completed",
+	completed: "pending",
+};
+
+const STATUS_LABEL: Record<TaskTodoStatus, string> = {
+	pending: "Pending — click to mark in progress",
+	in_progress: "In progress — click to mark done",
+	completed: "Done — click to reopen",
+};
+
+const STATUS_ICON: Record<TaskTodoStatus, string> = {
+	pending: "○",
+	in_progress: "◐",
+	completed: "●",
+};
 
 // ISO -> the value a <input type="datetime-local"> expects, in local time
 function toLocalInput(iso: string | null): string {
@@ -48,6 +69,10 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 	const [dueAt, setDueAt] = useState(toLocalInput(task.dueAt));
 	const [tagIds, setTagIds] = useState<number[]>(task.tags.map((t) => t.id));
 	const [dependsOn, setDependsOn] = useState<number[]>(task.dependsOn ?? []);
+	const [todos, setTodos] = useState<TaskTodo[]>(task.todos ?? []);
+	const [newTodo, setNewTodo] = useState("");
+	const [editingTodo, setEditingTodo] = useState<number | null>(null);
+	const [todoDraft, setTodoDraft] = useState("");
 
 	function toggleTag(id: number) {
 		setTagIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -55,6 +80,36 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 
 	function toggleDep(id: number) {
 		setDependsOn((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+	}
+
+	function cycleStatus(index: number) {
+		setTodos((prev) => prev.map((t, i) => (i === index ? { ...t, status: NEXT_STATUS[t.status] } : t)));
+	}
+
+	function addTodo(e: React.FormEvent) {
+		e.preventDefault();
+		const trimmed = newTodo.trim();
+		if (!trimmed) return;
+		setTodos((prev) => [...prev, { content: trimmed, status: "pending" }]);
+		setNewTodo("");
+	}
+
+	function removeTodo(index: number) {
+		setTodos((prev) => prev.filter((_, i) => i !== index));
+	}
+
+	function startEditTodo(index: number) {
+		setEditingTodo(index);
+		setTodoDraft(todos[index].content);
+	}
+
+	function commitEditTodo() {
+		if (editingTodo === null) return;
+		const trimmed = todoDraft.trim();
+		if (trimmed) {
+			setTodos((prev) => prev.map((t, i) => (i === editingTodo ? { ...t, content: trimmed } : t)));
+		}
+		setEditingTodo(null);
 	}
 
 	// Every other task on the board, as a dependency candidate (labelled with
@@ -76,6 +131,7 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 			dueAt: fromLocalInput(dueAt),
 			tagIds,
 			dependsOn,
+			todos,
 		})
 			.then(onClose)
 			.catch(() => undefined);
@@ -124,6 +180,76 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 						aria-label="Task description"
 					/>
 				</label>
+
+				<div className={styles.field}>
+					<span className={styles.label}>
+						Todos
+						{todos.length > 0 && (
+							<em className={styles.todoCount}>
+								{todos.filter((t) => t.status === "completed").length}/{todos.length}
+							</em>
+						)}
+					</span>
+					{todos.length > 0 && (
+						<ul className={styles.todoList}>
+							{todos.map((todo, i) => (
+								<li key={i} className={`${styles.todo} ${styles[`todo_${todo.status}`]}`}>
+									<button
+										type="button"
+										className={styles.todoStatus}
+										aria-label={`${STATUS_LABEL[todo.status]}`}
+										title={STATUS_LABEL[todo.status]}
+										onClick={() => cycleStatus(i)}
+									>
+										{STATUS_ICON[todo.status]}
+									</button>
+									{editingTodo === i ? (
+										<input
+											className={styles.todoInput}
+											value={todoDraft}
+											autoFocus
+											draggable={false}
+											aria-label="Edit todo"
+											onChange={(e) => setTodoDraft(e.target.value)}
+											onBlur={commitEditTodo}
+											onKeyDown={(e) => {
+												if (e.key === "Enter") commitEditTodo();
+												if (e.key === "Escape") setEditingTodo(null);
+											}}
+										/>
+									) : (
+										<span
+											className={styles.todoContent}
+											title="Double-click to edit"
+											onDoubleClick={() => startEditTodo(i)}
+										>
+											{todo.content}
+										</span>
+									)}
+									<button
+										type="button"
+										className="icon-btn"
+										aria-label="Remove todo"
+										onClick={() => removeTodo(i)}
+									>
+										✕
+									</button>
+								</li>
+							))}
+						</ul>
+					)}
+					<form className={styles.todoAdd} onSubmit={addTodo}>
+						<input
+							value={newTodo}
+							onChange={(e) => setNewTodo(e.target.value)}
+							placeholder={todos.length === 0 ? "Add a checklist item…" : "Add todo…"}
+							aria-label="New todo"
+						/>
+						<button type="submit" className="btn btn-primary" disabled={!newTodo.trim()}>
+							Add
+						</button>
+					</form>
+				</div>
 
 				<div className={styles.grid}>
 					<label className={styles.field}>

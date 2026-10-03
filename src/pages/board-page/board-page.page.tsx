@@ -49,6 +49,7 @@ function TaskCard({
 	const [renaming, setRenaming] = useState(false);
 	const [title, setTitle] = useState("");
 
+	const todosDone = task.todos.filter((t) => t.status === "completed").length;
 	const hasBadges =
 		task.priority !== null ||
 		task.tags.length > 0 ||
@@ -56,7 +57,8 @@ function TaskCard({
 		task.estimate !== null ||
 		task.dueAt !== null ||
 		task.dependsOn.length > 0 ||
-		task.dependents.length > 0;
+		task.dependents.length > 0 ||
+		task.todos.length > 0;
 
 	function commitRename() {
 		setRenaming(false);
@@ -140,6 +142,16 @@ function TaskCard({
 					{task.priority && (
 						<span className={`${styles.priority} ${styles[`prio_${task.priority}`]}`}>
 							{task.priority}
+						</span>
+					)}
+					{task.todos.length > 0 && (
+						<span
+							className={`${styles.metaBadge} ${
+								todosDone === task.todos.length ? styles.todosDone : ""
+							} ${styles.todosBadge}`}
+							title={`${todosDone}/${task.todos.length} todos done`}
+						>
+							☑ {todosDone}/{task.todos.length}
 						</span>
 					)}
 					{task.tags.map((tag) => (
