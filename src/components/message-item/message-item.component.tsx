@@ -1,4 +1,6 @@
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 import {
 	useMessageParts,
 	type FilePart,
@@ -62,7 +64,7 @@ function PartView({ part }: { part: Part }) {
 		case "text":
 			return (
 				<div className="md">
-					<ReactMarkdown>{part.text}</ReactMarkdown>
+					<ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{part.text}</ReactMarkdown>
 				</div>
 			);
 		case "reasoning":
@@ -76,7 +78,7 @@ function PartView({ part }: { part: Part }) {
 							<span>Thinking…</span>
 						</div>
 						<div className={`md ${styles.reasoningMd}`}>
-							<ReactMarkdown>{part.text}</ReactMarkdown>
+							<ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{part.text}</ReactMarkdown>
 						</div>
 					</div>
 				);
@@ -87,7 +89,7 @@ function PartView({ part }: { part: Part }) {
 						Thought for {Math.max(1, Math.round((part.time.end - part.time.start) / 1000))}s
 					</summary>
 					<div className={`md ${styles.reasoningMd}`}>
-						<ReactMarkdown>{part.text}</ReactMarkdown>
+						<ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{part.text}</ReactMarkdown>
 					</div>
 				</details>
 			);
