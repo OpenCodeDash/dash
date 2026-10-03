@@ -171,3 +171,128 @@
 		color: var(--text-faint);
 	}
 }
+
+.depChips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.depChip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 5px 3px 10px;
+	border: 1px solid var(--accent-line);
+	border-radius: var(--radius-full);
+	background: var(--accent-soft);
+	color: var(--accent);
+	font-size: 12px;
+	max-width: 100%;
+}
+
+.depRemove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+	border: none;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--accent);
+	font-size: 13px;
+	line-height: 1;
+	cursor: pointer;
+	transition: background var(--transition-fast), color var(--transition-fast);
+
+	&:hover {
+		background: var(--bg-active);
+		color: var(--text);
+	}
+}
+
+.depSearch {
+	width: 100%;
+	font-size: 13px;
+}
+
+.depList {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	max-height: 180px;
+	overflow-y: auto;
+	padding: 3px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--bg-elevated);
+}
+
+.depRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 5px 8px;
+	border: 1px solid transparent;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--text-dim);
+	font-size: 13px;
+	text-align: left;
+	cursor: pointer;
+	transition:
+		color var(--transition-fast),
+		border-color var(--transition-fast),
+		background var(--transition-fast);
+
+	&:hover {
+		color: var(--text);
+		background: var(--bg-hover);
+	}
+}
+
+.depRowOn {
+	color: var(--accent);
+	border-color: var(--accent-line);
+	background: var(--accent-soft);
+
+	&:hover {
+		color: var(--accent);
+		background: var(--accent-soft-strong);
+	}
+}
+
+.depCheck {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+	border: 1px solid var(--border-strong);
+	border-radius: 4px;
+	background: var(--bg-input);
+	color: var(--accent);
+	font-size: 11px;
+	line-height: 1;
+}
+
+.depRowName {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.depRowCol {
+	flex-shrink: 0;
+	max-width: 40%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 11px;
+	color: var(--text-faint);
+}
