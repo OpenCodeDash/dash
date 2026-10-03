@@ -128,6 +128,34 @@ export async function run() {
 		s.check("two tasks created in In Progress", (tasks["In Progress"] || []).length === 2, JSON.stringify(tasks));
 		s.check("server order is [Alpha, Beta]", JSON.stringify(tasks["In Progress"] || []) === JSON.stringify(["Alpha", "Beta"]), JSON.stringify(tasks["In Progress"] || []));
 
+		// 3b. A long multi-word title wraps to multiple lines instead of being
+		//     clipped with an ellipsis (the title now sits in its own full-width
+		//     row below the handle/actions row). Created in Done so the exact
+		//     [Alpha, Beta] order assertions above are untouched.
+		results("3b. Long title wraps");
+		await addTask(c, "Done", "Long multi word title that wraps across several lines instead of truncating");
+		await sleep(500);
+		// whiteSpace must not be nowrap, a wrapping policy must be set, and the
+		// rendered title must be taller than one line. Single-line height is
+		// measured with a hidden nowrap probe sharing the title's own class,
+		// since computed lineHeight is "normal" (not a px value).
+		const wrap = await c.eval(`(() => {
+		const el=[...document.querySelectorAll('[data-task-name]')].find(e=>e.textContent.includes("wraps across several lines"));
+		if(!el) return {ok:false, err:"title element not found"};
+		const cs=getComputedStyle(el);
+		const wrapEnabled = cs.whiteSpace !== "nowrap" && (["anywhere","break-word","break-words"].includes(cs.overflowWrap) || ["break-word","break-all"].includes(cs.wordBreak));
+		const probe=document.createElement("span");
+		probe.style.cssText="position:absolute;visibility:hidden;white-space:nowrap;";
+		probe.className=el.className;
+		probe.textContent="x";
+		el.appendChild(probe);
+		const single=probe.offsetHeight;
+		probe.remove();
+		const multiLine = el.offsetHeight > single * 1.5;
+		return {ok: wrapEnabled && multiLine, whiteSpace: cs.whiteSpace, overflowWrap: cs.overflowWrap, wordBreak: cs.wordBreak, height: el.offsetHeight, singleLine: single};
+	})()`);
+		s.check("long title wraps to multiple lines", wrap.ok, JSON.stringify(wrap));
+
 		// 4. Rename Alpha -> "Alpha 2" via double-click
 		results("4. Rename task");
 		const alphaId = await c.eval(`(() => { const el=${TASKS}.find(t=>t.textContent.includes("Alpha")); return el ? el.dataset.taskId : null; })()`);
