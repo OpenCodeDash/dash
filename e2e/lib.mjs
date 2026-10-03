@@ -2,7 +2,39 @@
 // used to spin up / clean up scratch sessions deterministically.
 export const API_URL = process.env.API_URL || "http://localhost:4096";
 export const APP_URL = process.env.APP_URL || "http://localhost:5173";
-export const BOARD_URL = process.env.BOARD_URL || "http://localhost:3000";
+// backdash binds loopback by default; use the IPv4 literal (headless Chromium
+// hangs resolving `localhost`).
+export const BOARD_URL = process.env.BOARD_URL || "http://127.0.0.1:3000";
+
+// Fixed identity the boards/tasks suites act as. Register the first time, log
+// in afterwards (the backdash server persists accounts).
+export const E2E_ACCOUNT = { name: "e2e-dash", password: "e2e-dash-password" };
+
+let authToken = null;
+
+// Returns a bearer token for the shared e2e account, memoized per process.
+export async function authenticate() {
+	if (authToken) return authToken;
+	const headers = { "content-type": "application/json" };
+	const body = JSON.stringify(E2E_ACCOUNT);
+	let res = await fetch(`${BOARD_URL}/auth/register`, { method: "POST", headers, body });
+	if (res.status === 409) {
+		res = await fetch(`${BOARD_URL}/auth/login`, { method: "POST", headers, body });
+	}
+	if (!res.ok) throw new Error(`backdash auth failed: ${res.status}`);
+	const session = await res.json();
+	authToken = session.token;
+	return authToken;
+}
+
+// fetch with the shared bearer token attached.
+export async function authFetch(url, init = {}) {
+	const token = await authenticate();
+	return fetch(url, {
+		...init,
+		headers: { ...(init.headers || {}), Authorization: `Bearer ${token}` },
+	});
+}
 
 export class Suite {
 	constructor(name) {

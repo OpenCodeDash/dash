@@ -3,7 +3,7 @@
 // drag-reorder / delete, asserting against both the DOM and the server API.
 // Needs the backdash server (default :3000, BOARD_URL env).
 import { newPage, sleep, waitFor, typeSel, results } from "./cdp.mjs";
-import { Suite, APP_URL, BOARD_URL } from "./lib.mjs";
+import { Suite, APP_URL, BOARD_URL, authenticate, authFetch } from "./lib.mjs";
 
 const BOARD = "e2e Boards";
 const CARDS = `[...document.querySelectorAll('[title="Drag to reorder"]')].map(s=>s.parentElement)`;
@@ -28,9 +28,9 @@ const waitEval = async (page, expr, timeout = 5000) => {
 
 async function deleteBoardsNamed(name) {
 	try {
-		const list = await fetch(`${BOARD_URL}/kanban`).then((r) => r.json());
+		const list = await authFetch(`${BOARD_URL}/kanban`).then((r) => r.json());
 		for (const b of list.filter((x) => x.name === name)) {
-			await fetch(`${BOARD_URL}/kanban/${b.id}`, { method: "DELETE" });
+			await authFetch(`${BOARD_URL}/kanban/${b.id}`, { method: "DELETE" });
 		}
 	} catch {}
 }
@@ -39,7 +39,8 @@ export async function run() {
 	const s = new Suite("boards");
 	await deleteBoardsNamed(BOARD); // idempotent start: clear leftovers from a failed run
 
-	const c = await newPage(`${APP_URL}/boards`);
+	const token = await authenticate();
+	const c = await newPage(`${APP_URL}/boards`, { token });
 	const exc = [];
 	c.on("Runtime.exceptionThrown", (p) => exc.push(p.exceptionDetails?.exception?.description || p.exceptionDetails?.text || "unknown"));
 	c.on("Page.javascriptDialogOpening", () => c.send("Page.handleJavaScriptDialog", { accept: false }).catch(() => {}));
@@ -54,7 +55,7 @@ export async function run() {
 		await c.eval(typeSel('input[placeholder="New board name"]', BOARD));
 		s.check("create board clicked", (await c.eval(clickByText("button", "Create"))).ok);
 		s.check("board row appears", await waitEval(c, `[...document.querySelectorAll("button")].some(b=>b.textContent.trim()==="Open")`));
-		const list = await fetch(`${BOARD_URL}/kanban`).then((r) => r.json());
+		const list = await authFetch(`${BOARD_URL}/kanban`).then((r) => r.json());
 		s.check("server persisted board", list.some((b) => b.name === BOARD), list.length + " board(s)");
 
 		// 3. Open the board
@@ -79,7 +80,7 @@ export async function run() {
 		const cols = await c.eval(`${CARDS}.map(c=>c.textContent)`);
 		s.check("both columns render", cols.some((t) => t.includes("First")) && cols.some((t) => t.includes("Second")), JSON.stringify(cols.map((x) => x.slice(0, 20))));
 		const boardId = await c.eval(`location.pathname.split("/").pop()`);
-		const names = await fetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json()).then((b) => b.columns.map((x) => x.name));
+		const names = await authFetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json()).then((b) => b.columns.map((x) => x.name));
 		s.check("server persisted columns", names.includes("First") && names.includes("Second"), names.join(", "));
 
 		// 5. Sidebar lists the board on the home page
@@ -104,7 +105,7 @@ export async function run() {
 			await c.eval(`(() => { const card=${renameCol}; const input=[...card.querySelectorAll("input")].find(i=>!i.closest("form")); input.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true})); return true; })()`);
 		}
 		await sleep(400);
-		const names2 = await fetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json()).then((b) => b.columns.map((x) => x.name));
+		const names2 = await authFetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json()).then((b) => b.columns.map((x) => x.name));
 		s.check("column rename persisted", names2.includes("Second renamed"), names2.join(", "));
 
 		// 7. Reorder via drag (drop First onto Second).
@@ -125,12 +126,12 @@ export async function run() {
 		await sleep(80);
 		await c.eval(dragMk("dragend", "First"));
 		await sleep(500);
-		const order = await fetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json()).then((b) => b.columns.map((x) => x.name).join(" -> "));
+		const order = await authFetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json()).then((b) => b.columns.map((x) => x.name).join(" -> "));
 		s.check("reorder persisted", order.indexOf("Second renamed") < order.indexOf("First"), order);
 
 		// 8. Delete via API; the store (and sidebar) must update over SSE
 		results("8. Delete board");
-		const del = await fetch(`${BOARD_URL}/kanban/${boardId}`, { method: "DELETE" });
+		const del = await authFetch(`${BOARD_URL}/kanban/${boardId}`, { method: "DELETE" });
 		s.check("board deleted via API", del.status === 204 || del.status === 200);
 		await sleep(800);
 		s.check("sidebar updated after delete", !(await c.eval(`document.querySelector("aside")?.textContent?.includes(${JSON.stringify(BOARD)})`)));

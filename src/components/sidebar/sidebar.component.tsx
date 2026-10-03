@@ -13,6 +13,7 @@ interface SidebarProps {
 	open: boolean;
 	onNewSession: () => void;
 	onShowServer: () => void;
+	onSignOut: () => void;
 }
 
 interface Group {
@@ -26,7 +27,7 @@ interface Group {
 const byUpdatedDesc = (a: Session, b: Session) => (b.time.updated ?? 0) - (a.time.updated ?? 0);
 const newest = (g: Group) => g.sessions.reduce((max, s) => Math.max(max, s.time.updated ?? 0), 0);
 
-export function Sidebar({ open, onNewSession, onShowServer }: SidebarProps) {
+export function Sidebar({ open, onNewSession, onShowServer, onSignOut }: SidebarProps) {
 	const sessions = useSessions();
 	const connected = useConnected();
 	const boards = useBoards();
@@ -126,6 +127,14 @@ export function Sidebar({ open, onNewSession, onShowServer }: SidebarProps) {
 				<button type="button" className={styles.footerBtn} onClick={onShowServer}>
 					<span className="status-dot status-dot-connected" />
 					Server
+				</button>
+				<button
+					type="button"
+					className={styles.footerBtn}
+					onClick={onSignOut}
+					title="Sign out of backdash"
+				>
+					Sign out
 				</button>
 				<button
 					type="button"

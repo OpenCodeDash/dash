@@ -67,7 +67,7 @@ export class Client {
 	}
 }
 
-export async function newPage(url) {
+export async function newPage(url, { token } = {}) {
 	let res = await fetch(`http://${CDP}/json/new?url=${encodeURIComponent(url)}`, { method: "PUT" });
 	if (!res.ok) res = await fetch(`http://${CDP}/json/new?url=${encodeURIComponent(url)}`);
 	const t = await res.json();
@@ -79,6 +79,13 @@ export async function newPage(url) {
 	await c.send("DOM.enable");
 	await c.send("Log.enable");
 	await c.send("Network.enable");
+	// Seed the backdash bearer token before the app's scripts run, so the SPA
+	// boots straight into the authenticated shell instead of the sign-in gate.
+	if (token) {
+		await c.send("Page.addScriptToEvaluateOnNewDocument", {
+			source: `try { localStorage.setItem("backdash.token", ${JSON.stringify(token)}); } catch (e) {}`,
+		});
+	}
 	if (url) {
 		await c.send("Page.navigate", { url });
 		await new Promise((r) => {
