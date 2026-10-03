@@ -6,7 +6,7 @@
 // finds that pair; when none exists the suite skips vacuously rather than
 // failing, so it stays robust across server states (no model needed).
 import { newPage, sleep, results } from "./cdp.mjs";
-import { Suite, APP_URL, pickParentChild } from "./lib.mjs";
+import { Suite, APP_URL, pickParentChild, authenticate } from "./lib.mjs";
 
 const clickFirst = (sel) => `(() => { const el=document.querySelector(${JSON.stringify(sel)}); if(!el) return false; el.scrollIntoView({block:'center'}); el.click(); return true; })()`;
 
@@ -32,7 +32,8 @@ export async function run() {
 		return true;
 	}
 	const { parent, child } = pair;
-	const c = await newPage("about:blank");
+	const token = await authenticate();
+	const c = await newPage("about:blank", { token });
 	const exc = [];
 	c.on("Runtime.exceptionThrown", (p) => exc.push(p.exceptionDetails?.text || ""));
 

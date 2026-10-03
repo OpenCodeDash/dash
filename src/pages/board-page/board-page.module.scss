@@ -85,6 +85,7 @@
 .rename {
 	flex: 1;
 	min-width: 0;
+	width: 100%;
 	font-size: 14px;
 }
 
@@ -159,6 +160,10 @@
 	padding: 8px 10px;
 	cursor: grab;
 
+	.rename {
+		margin-top: 6px;
+	}
+
 	&:active {
 		cursor: grabbing;
 	}
@@ -171,17 +176,23 @@
 .taskTop {
 	display: flex;
 	align-items: center;
+	justify-content: space-between;
 	gap: 6px;
 }
 
+.taskActions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
 .taskName {
-	flex: 1;
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	margin-top: 6px;
 	font-size: 13px;
 	font-weight: 500;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	word-break: break-word;
 }
 
 .taskDesc {

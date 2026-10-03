@@ -49,16 +49,25 @@ function TaskCard({
 	const [renaming, setRenaming] = useState(false);
 	const [title, setTitle] = useState("");
 
-	const todosDone = task.todos.filter((t) => t.status === "completed").length;
+	// A freshly-created task may not yet carry these arrays (the server omits
+	// empty lists and the optimistic create predates the server response), so
+	// normalize them here. An undefined field would otherwise throw in the badge
+	// code below and, with no error boundary, unmount the whole board.
+	const todos = task.todos ?? [];
+	const tags = task.tags ?? [];
+	const dependsOn = task.dependsOn ?? [];
+	const dependents = task.dependents ?? [];
+
+	const todosDone = todos.filter((t) => t.status === "completed").length;
 	const hasBadges =
 		task.priority !== null ||
-		task.tags.length > 0 ||
+		tags.length > 0 ||
 		task.assignee !== null ||
 		task.estimate !== null ||
 		task.dueAt !== null ||
-		task.dependsOn.length > 0 ||
-		task.dependents.length > 0 ||
-		task.todos.length > 0;
+		dependsOn.length > 0 ||
+		dependents.length > 0 ||
+		todos.length > 0;
 
 	function commitRename() {
 		setRenaming(false);
@@ -94,48 +103,50 @@ function TaskCard({
 				<span className={styles.handle} title="Drag task">
 					⠿
 				</span>
-				{renaming ? (
-					<input
-						className={styles.rename}
-						value={title}
-						autoFocus
-						draggable={false}
-						onClick={(e) => e.stopPropagation()}
-						onChange={(e) => setTitle(e.target.value)}
-						onBlur={commitRename}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") commitRename();
-							if (e.key === "Escape") setRenaming(false);
+				<div className={styles.taskActions}>
+					<button
+						type="button"
+						className="icon-btn"
+						title="Edit task"
+						onClick={(e) => {
+							e.stopPropagation();
+							onEdit(task);
 						}}
-					/>
-				) : (
-					<span
-						className={styles.taskName}
-						data-task-name={task.id}
-						onDoubleClick={() => {
-							setTitle(task.name);
-							setRenaming(true);
-						}}
-						title="Double-click to rename"
 					>
-						{task.name}
-					</span>
-				)}
-				<button
-					type="button"
-					className="icon-btn"
-					title="Edit task"
-					onClick={(e) => {
-						e.stopPropagation();
-						onEdit(task);
-					}}
-				>
-					✎
-				</button>
-				<button type="button" className="icon-btn" title="Delete task" onClick={() => void deleteTask(boardId, column.id, task.id).catch(() => undefined)}>
-					✕
-				</button>
+						✎
+					</button>
+					<button type="button" className="icon-btn" title="Delete task" onClick={() => void deleteTask(boardId, column.id, task.id).catch(() => undefined)}>
+						✕
+					</button>
+				</div>
 			</div>
+			{renaming ? (
+				<input
+					className={styles.rename}
+					value={title}
+					autoFocus
+					draggable={false}
+					onClick={(e) => e.stopPropagation()}
+					onChange={(e) => setTitle(e.target.value)}
+					onBlur={commitRename}
+					onKeyDown={(e) => {
+						if (e.key === "Enter") commitRename();
+						if (e.key === "Escape") setRenaming(false);
+					}}
+				/>
+			) : (
+				<span
+					className={styles.taskName}
+					data-task-name={task.id}
+					onDoubleClick={() => {
+						setTitle(task.name);
+						setRenaming(true);
+					}}
+					title="Double-click to rename"
+				>
+					{task.name}
+				</span>
+			)}
 			{task.description && <div className={styles.taskDesc}>{task.description}</div>}
 			{hasBadges && (
 				<div className={styles.badges}>
@@ -144,17 +155,17 @@ function TaskCard({
 							{task.priority}
 						</span>
 					)}
-					{task.todos.length > 0 && (
+					{todos.length > 0 && (
 						<span
 							className={`${styles.metaBadge} ${
-								todosDone === task.todos.length ? styles.todosDone : ""
+								todosDone === todos.length ? styles.todosDone : ""
 							} ${styles.todosBadge}`}
-							title={`${todosDone}/${task.todos.length} todos done`}
+							title={`${todosDone}/${todos.length} todos done`}
 						>
-							☑ {todosDone}/{task.todos.length}
+							☑ {todosDone}/{todos.length}
 						</span>
 					)}
-					{task.tags.map((tag) => (
+					{tags.map((tag) => (
 						<span
 							key={tag.id}
 							className={styles.tag}
@@ -166,24 +177,24 @@ function TaskCard({
 					{task.assignee && <span className={styles.metaBadge}>@{task.assignee}</span>}
 					{task.estimate !== null && <span className={styles.metaBadge}>{task.estimate} pts</span>}
 					{task.dueAt && <span className={styles.metaBadge}>{formatDue(task.dueAt)}</span>}
-					{task.dependsOn.length > 0 && (
+					{dependsOn.length > 0 && (
 						<span
 							className={`${styles.metaBadge} ${styles.depBadge}`}
-							title={`Depends on: ${task.dependsOn
+							title={`Depends on: ${dependsOn
 								.map((id) => taskNameById.get(id) ?? `#${id}`)
 								.join(", ")}`}
 						>
-							⛓ {task.dependsOn.length}
+							⛓ {dependsOn.length}
 						</span>
 					)}
-					{task.dependents.length > 0 && (
+					{dependents.length > 0 && (
 						<span
 							className={`${styles.metaBadge} ${styles.depBadge}`}
-							title={`Blocks: ${task.dependents
+							title={`Blocks: ${dependents
 								.map((id) => taskNameById.get(id) ?? `#${id}`)
 								.join(", ")}`}
 						>
-							⇢ {task.dependents.length}
+							⇢ {dependents.length}
 						</span>
 					)}
 				</div>
