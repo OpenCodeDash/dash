@@ -1,6 +1,6 @@
 // Orchestrator for the headless e2e suite.
 //
-//   node e2e/run.mjs            structural + lifecycle + subagent + session-refresh + bench + boards + tasks
+//   node e2e/run.mjs            structural + lifecycle + subagent + session-refresh + bench + boards + tasks + mobile-swipe
 //   node e2e/run.mjs --with-model   also run model-backed checks (needs a working model)
 //
 // Prereqs (see README.md): opencode server on :4096, Vite dev server on :5173,
@@ -15,6 +15,7 @@ import { run as runSessionRefresh } from "./session-refresh.test.mjs";
 import { run as runBench } from "./bench.test.mjs";
 import { run as runBoards } from "./boards.test.mjs";
 import { run as runTasks } from "./tasks.test.mjs";
+import { run as runMobileSwipe } from "./mobile-swipe.test.mjs";
 import { run as runModel } from "./model.test.mjs";
 
 const withModel = process.argv.includes("--with-model");
@@ -52,6 +53,7 @@ await runBench();
 if (boardsOk) {
 	if (!(await runSuite("boards", runBoards))) failures.push("boards");
 	if (!(await runSuite("tasks", runTasks))) failures.push("tasks");
+	if (!(await runSuite("mobile-swipe", runMobileSwipe))) failures.push("mobile-swipe");
 } else {
 	console.log("\n(skip boards checks — backdash server not reachable at " + BOARD_URL + ")");
 }

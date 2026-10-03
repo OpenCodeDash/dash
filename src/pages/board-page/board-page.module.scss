@@ -69,6 +69,14 @@
 	pointer-events: none;
 }
 
+.blocked {
+	opacity: 0.5;
+	filter: grayscale(1);
+	transition:
+		opacity var(--transition-base),
+		filter var(--transition-base);
+}
+
 .cardTop {
 	display: flex;
 	align-items: center;

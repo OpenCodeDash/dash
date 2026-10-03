@@ -11,6 +11,7 @@ import { DirectoryPicker } from "./components/directory-picker/directory-picker.
 import { MobileHeader } from "./components/mobile-header/mobile-header.component.tsx";
 import { ServerPanel } from "./components/server-panel/server-panel.component.tsx";
 import { Sidebar } from "./components/sidebar/sidebar.component.tsx";
+import { useEdgeSwipe } from "./hooks/use-edge-swipe.ts";
 import { BoardPage } from "./pages/board-page/board-page.page.tsx";
 import { BoardsPage } from "./pages/boards-page/boards-page.page.tsx";
 import { HomePage } from "./pages/home-page/home-page.page.tsx";
@@ -61,6 +62,8 @@ export default function App() {
 	}, []);
 	const closePicker = useCallback(() => setPickerOpen(false), []);
 	const closeServer = useCallback(() => setServerOpen(false), []);
+
+	useEdgeSwipe({ drawerOpen: sidebarOpen, onOpen: openSidebar, onClose: closeSidebar });
 
 	if (!token) {
 		return <AuthGate onAuthenticated={handleAuthenticated} />;
