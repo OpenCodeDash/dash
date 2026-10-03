@@ -67,7 +67,7 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 	const [estimate, setEstimate] = useState(task.estimate === null ? "" : String(task.estimate));
 	const [assignee, setAssignee] = useState(task.assignee ?? "");
 	const [dueAt, setDueAt] = useState(toLocalInput(task.dueAt));
-	const [tagIds, setTagIds] = useState<number[]>(task.tags.map((t) => t.id));
+	const [tagIds, setTagIds] = useState<number[]>((task.tags ?? []).map((t) => t.id));
 	const [dependsOn, setDependsOn] = useState<number[]>(task.dependsOn ?? []);
 	const [todos, setTodos] = useState<TaskTodo[]>(task.todos ?? []);
 	const [newTodo, setNewTodo] = useState("");
