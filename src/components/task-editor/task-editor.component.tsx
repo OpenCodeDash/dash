@@ -40,7 +40,7 @@ function toLocalInput(iso: string | null): string {
 	if (Number.isNaN(date.getTime())) return "";
 	const pad = (n: number) => String(n).padStart(2, "0");
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
-		date.getHours()
+		date.getHours(),
 	)}:${pad(date.getMinutes())}`;
 }
 
@@ -70,6 +70,7 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 	const [dueAt, setDueAt] = useState(toLocalInput(task.dueAt));
 	const [tagIds, setTagIds] = useState<number[]>((task.tags ?? []).map((t) => t.id));
 	const [dependsOn, setDependsOn] = useState<number[]>(task.dependsOn ?? []);
+	const [depQuery, setDepQuery] = useState("");
 	const [todos, setTodos] = useState<TaskTodo[]>(task.todos ?? []);
 	const [newTodo, setNewTodo] = useState("");
 	const [editingTodo, setEditingTodo] = useState<number | null>(null);
@@ -84,7 +85,9 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 	}
 
 	function cycleStatus(index: number) {
-		setTodos((prev) => prev.map((t, i) => (i === index ? { ...t, status: NEXT_STATUS[t.status] } : t)));
+		setTodos((prev) =>
+			prev.map((t, i) => (i === index ? { ...t, status: NEXT_STATUS[t.status] } : t)),
+		);
 	}
 
 	function addTodo(e: React.FormEvent) {
@@ -118,6 +121,11 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 	const depCandidates = (board?.columns ?? [])
 		.flatMap((column) => column.tasks.map((t) => ({ id: t.id, name: t.name, column: column.name })))
 		.filter((c) => c.id !== task.id);
+
+	const depSelected = depCandidates.filter((c) => dependsOn.includes(c.id));
+	const depFiltered = depQuery.trim()
+		? depCandidates.filter((c) => c.name.toLowerCase().includes(depQuery.trim().toLowerCase()))
+		: depCandidates;
 
 	function submit(e: React.FormEvent) {
 		e.preventDefault();
@@ -333,23 +341,62 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 					{depCandidates.length === 0 ? (
 						<p className={styles.hint}>No other tasks to depend on yet.</p>
 					) : (
-						<div className={styles.tags}>
-							{depCandidates.map((c) => {
-								const active = dependsOn.includes(c.id);
-								return (
-									<button
-										key={c.id}
-										type="button"
-										className={`${styles.tagToggle} ${active ? styles.tagOn : ""}`}
-										aria-pressed={active}
-										title={`in ${c.column}`}
-										onClick={() => toggleDep(c.id)}
-									>
-										{c.name}
-									</button>
-								);
-							})}
-						</div>
+						<>
+							{depSelected.length > 0 && (
+								<div className={styles.depChips}>
+									{depSelected.map((c) => (
+										<span
+											key={c.id}
+											className={styles.depChip}
+											data-dep-chip={c.id}
+											title={`in ${c.column}`}
+										>
+											{c.name}
+											<button
+												type="button"
+												className={styles.depRemove}
+												aria-label={`Remove dependency ${c.name}`}
+												onClick={() => toggleDep(c.id)}
+											>
+												×
+											</button>
+										</span>
+									))}
+								</div>
+							)}
+							<input
+								className={styles.depSearch}
+								value={depQuery}
+								onChange={(e) => setDepQuery(e.target.value)}
+								placeholder="Search tasks…"
+								aria-label="Search dependency tasks"
+							/>
+							<div className={styles.depList}>
+								{depFiltered.length === 0 ? (
+									<p className={styles.hint}>No tasks match “{depQuery}”.</p>
+								) : (
+									depFiltered.map((c) => {
+										const active = dependsOn.includes(c.id);
+										return (
+											<button
+												key={c.id}
+												type="button"
+												className={`${styles.depRow} ${active ? styles.depRowOn : ""}`}
+												data-dep-candidate={c.id}
+												aria-pressed={active}
+												onClick={() => toggleDep(c.id)}
+											>
+												<span className={styles.depCheck} aria-hidden="true">
+													{active ? "✓" : ""}
+												</span>
+												<span className={styles.depRowName}>{c.name}</span>
+												<span className={styles.depRowCol}>{c.column}</span>
+											</button>
+										);
+									})
+								)}
+							</div>
+						</>
 					)}
 				</div>
 			</form>

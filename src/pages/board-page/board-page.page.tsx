@@ -14,9 +14,7 @@ import { TaskEditor } from "../../components/task-editor/task-editor.component.t
 import styles from "./board-page.module.scss";
 
 type DragState =
-	| { kind: "column"; id: number }
-	| { kind: "task"; id: number; fromColumnId: number }
-	| null;
+	{ kind: "column"; id: number } | { kind: "task"; id: number; fromColumnId: number } | null;
 
 function formatDue(iso: string): string {
 	const date = new Date(iso);
@@ -27,8 +25,10 @@ function formatDue(iso: string): string {
 function TaskCard({
 	task,
 	column,
+	colIndex,
 	boardId,
 	taskNameById,
+	taskColIndexById,
 	isDragSource,
 	onDragStartTask,
 	onDropOnTask,
@@ -37,8 +37,10 @@ function TaskCard({
 }: {
 	task: Task;
 	column: Column;
+	colIndex: number;
 	boardId: string;
 	taskNameById: Map<number, string>;
+	taskColIndexById: Map<number, number>;
 	isDragSource: boolean;
 	onDragStartTask: (task: Task, columnId: number) => void;
 	onDropOnTask: (taskId: number, columnId: number) => void;
@@ -57,6 +59,14 @@ function TaskCard({
 	const tags = task.tags ?? [];
 	const dependsOn = task.dependsOn ?? [];
 	const dependents = task.dependents ?? [];
+
+	// Grey a task out when any of its dependencies is NOT ahead of it: the
+	// dependency sits in the same column or one to the left. A dependency in a
+	// strictly later column is fine (id missing from the map is treated as ok).
+	const blocked = dependsOn.some((id) => {
+		const depCol = taskColIndexById.get(id);
+		return depCol !== undefined && depCol <= colIndex;
+	});
 
 	const todosDone = todos.filter((t) => t.status === "completed").length;
 	const hasBadges =
@@ -79,9 +89,11 @@ function TaskCard({
 
 	return (
 		<div
-			className={`${styles.task} ${isDragSource ? styles.dragging : ""}`}
+			className={`${styles.task} ${isDragSource ? styles.dragging : ""} ${blocked ? styles.blocked : ""}`}
 			draggable
 			data-task-id={task.id}
+			data-blocked={blocked ? "true" : undefined}
+			title={blocked ? "Blocked: a dependency is in the same or an earlier column" : undefined}
 			onDragStart={(e) => {
 				// don't let the column lane interpret this as a column drag
 				e.stopPropagation();
@@ -229,8 +241,10 @@ function TaskCard({
 
 function ColumnCard({
 	column,
+	colIndex,
 	boardId,
 	taskNameById,
+	taskColIndexById,
 	drag,
 	onColumnDragStart,
 	onColumnDrop,
@@ -240,8 +254,10 @@ function ColumnCard({
 	onEdit,
 }: {
 	column: Column;
+	colIndex: number;
 	boardId: string;
 	taskNameById: Map<number, string>;
+	taskColIndexById: Map<number, number>;
 	drag: DragState;
 	onColumnDragStart: (id: number) => void;
 	onColumnDrop: (id: number) => void;
@@ -335,17 +351,21 @@ function ColumnCard({
 					</button>
 				</div>
 				<button
-				type="button"
-				className={`${styles.queueToggle} ${column.isQueue ? styles.queueOn : ""}`}
-				title={
-					column.isQueue
-						? "Queue column — agents can claim its tasks. Click to make it a normal column."
-						: "Mark as a queue so agents can claim its tasks."
-				}
-				onClick={() => void updateColumn(boardId, column.id, { isQueue: !column.isQueue }).catch(() => undefined)}
-			>
-				{column.isQueue ? "queue" : "+ queue"}
-			</button>
+					type="button"
+					className={`${styles.queueToggle} ${column.isQueue ? styles.queueOn : ""}`}
+					title={
+						column.isQueue
+							? "Queue column — agents can claim its tasks. Click to make it a normal column."
+							: "Mark as a queue so agents can claim its tasks."
+					}
+					onClick={() =>
+						void updateColumn(boardId, column.id, { isQueue: !column.isQueue }).catch(
+							() => undefined,
+						)
+					}
+				>
+					{column.isQueue ? "queue" : "+ queue"}
+				</button>
 
 				<div className={styles.tasks}>
 					{column.tasks.map((task) => (
@@ -353,8 +373,10 @@ function ColumnCard({
 							key={task.id}
 							task={task}
 							column={column}
+							colIndex={colIndex}
 							boardId={boardId}
 							taskNameById={taskNameById}
+							taskColIndexById={taskColIndexById}
 							isDragSource={drag?.kind === "task" && drag.id === task.id}
 							onDragStartTask={onTaskDragStart}
 							onDropOnTask={onDropOnTask}
@@ -407,25 +429,30 @@ export function BoardPage() {
 
 	// Resolve the editor's task from the live board so it stays fresh while open
 	const editingTask = editing
-		? board?.columns
+		? (board?.columns
 				.find((c) => c.id === editing.columnId)
-				?.tasks.find((t) => t.id === editing.taskId) ?? null
+				?.tasks.find((t) => t.id === editing.taskId) ?? null)
 		: null;
 
-	// id -> name across the whole board, so dependency badges can name their
-	// related tasks regardless of which column they live in
-	const taskNameById = useMemo(() => {
-		const map = new Map<number, string>();
-		board?.columns.forEach((c) => c.tasks.forEach((t) => map.set(t.id, t.name)));
-		return map;
+	// id -> name and id -> column index across the whole board, so dependency
+	// badges can name their related tasks and the blocked state can tell whether
+	// a dependency sits in the same or an earlier column.
+	const { taskNameById, taskColIndexById } = useMemo(() => {
+		const nameById = new Map<number, string>();
+		const colIndexById = new Map<number, number>();
+		board?.columns.forEach((c, ci) =>
+			c.tasks.forEach((t) => {
+				nameById.set(t.id, t.name);
+				colIndexById.set(t.id, ci);
+			}),
+		);
+		return { taskNameById: nameById, taskColIndexById: colIndexById };
 	}, [board]);
 
 	useEffect(() => {
-		client
-			.getBoard(boardId)
-			.catch((error) => {
-				if (error instanceof BackdashError && error.status === 404) setMissingId(boardId);
-			});
+		client.getBoard(boardId).catch((error) => {
+			if (error instanceof BackdashError && error.status === 404) setMissingId(boardId);
+		});
 	}, [client, boardId]);
 
 	// Reorder columns; `targetId` null means "dropped outside a column" (go to end).
@@ -459,9 +486,10 @@ export function BoardPage() {
 		}
 		// Dropping outside a column is a no-op: the task stays where it was.
 		if (target) {
-			void moveTask(board.id, drag.id, { columnId: target.columnId, position: target.position }).catch(
-				() => undefined,
-			);
+			void moveTask(board.id, drag.id, {
+				columnId: target.columnId,
+				position: target.position,
+			}).catch(() => undefined);
 		}
 		setDrag(null);
 	}
@@ -474,7 +502,9 @@ export function BoardPage() {
 
 	function onDropOnTask(targetTaskId: number, columnId: number) {
 		if (drag?.kind === "task" && board) {
-			const target = board.columns.find((c) => c.id === columnId)?.tasks.find((t) => t.id === targetTaskId);
+			const target = board.columns
+				.find((c) => c.id === columnId)
+				?.tasks.find((t) => t.id === targetTaskId);
 			// insert just before the hovered task
 			if (target) handleTaskDrop({ columnId, position: target.position });
 		}
@@ -561,12 +591,14 @@ export function BoardPage() {
 				</div>
 
 				<div className={styles.columns}>
-					{board.columns.map((column) => (
+					{board.columns.map((column, colIndex) => (
 						<ColumnCard
 							key={column.id}
 							column={column}
+							colIndex={colIndex}
 							boardId={board.id}
 							taskNameById={taskNameById}
+							taskColIndexById={taskColIndexById}
 							drag={drag}
 							onColumnDragStart={onColumnDragStart}
 							onColumnDrop={onColumnDrop}
@@ -601,9 +633,7 @@ export function BoardPage() {
 				onConfirm={deleteBoardConfirmed}
 				onCancel={() => setConfirming(false)}
 			/>
-			{tagsOpen && (
-				<TagManager boardId={board.id} open onClose={() => setTagsOpen(false)} />
-			)}
+			{tagsOpen && <TagManager boardId={board.id} open onClose={() => setTagsOpen(false)} />}
 			{editingTask && (
 				<TaskEditor
 					key={editingTask.id}
