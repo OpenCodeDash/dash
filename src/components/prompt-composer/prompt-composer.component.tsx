@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useAgents, usePrompt, useProviders } from "react-opencode";
+import { Dropdown } from "../dropdown/dropdown.component.tsx";
 import styles from "./prompt-composer.module.scss";
 
 export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: boolean }) {
@@ -66,22 +67,24 @@ export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: b
 					}}
 				/>
 				<div className={styles.bar}>
-					<select className="select" value={modelKey} onChange={(e) => setModelKey(e.target.value)} title="Model">
-						<option value="">Default model</option>
-						{models.map((m) => (
-							<option key={m.key} value={m.key}>
-								{m.label}
-							</option>
-						))}
-					</select>
-					<select className="select" value={agent} onChange={(e) => setAgent(e.target.value)} title="Agent">
-						<option value="">Default agent</option>
-						{agents.map((a) => (
-							<option key={a.name} value={a.name}>
-								{a.name}
-							</option>
-						))}
-					</select>
+					<Dropdown
+						value={modelKey}
+						onChange={setModelKey}
+						title="Model"
+						options={[
+							{ value: "", label: "Default model" },
+							...models.map((m) => ({ value: m.key, label: m.label })),
+						]}
+					/>
+					<Dropdown
+						value={agent}
+						onChange={setAgent}
+						title="Agent"
+						options={[
+							{ value: "", label: "Default agent" },
+							...agents.map((a) => ({ value: a.name, label: a.name })),
+						]}
+					/>
 					<span className="spacer" />
 					{busy ? (
 						<button type="button" className="btn btn-danger" onClick={() => void abort()}>

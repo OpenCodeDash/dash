@@ -8,6 +8,7 @@ import {
 	type TaskTodo,
 	type TaskTodoStatus,
 } from "react-backdash";
+import { Dropdown } from "../dropdown/dropdown.component.tsx";
 import { Modal } from "../modal/modal.component.tsx";
 import styles from "./task-editor.module.scss";
 
@@ -67,7 +68,7 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 	const [estimate, setEstimate] = useState(task.estimate === null ? "" : String(task.estimate));
 	const [assignee, setAssignee] = useState(task.assignee ?? "");
 	const [dueAt, setDueAt] = useState(toLocalInput(task.dueAt));
-	const [tagIds, setTagIds] = useState<number[]>(task.tags.map((t) => t.id));
+	const [tagIds, setTagIds] = useState<number[]>((task.tags ?? []).map((t) => t.id));
 	const [dependsOn, setDependsOn] = useState<number[]>(task.dependsOn ?? []);
 	const [todos, setTodos] = useState<TaskTodo[]>(task.todos ?? []);
 	const [newTodo, setNewTodo] = useState("");
@@ -254,18 +255,15 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 				<div className={styles.grid}>
 					<label className={styles.field}>
 						<span className={styles.label}>Priority</span>
-						<select
+						<Dropdown
 							value={priority}
-							onChange={(e) => setPriority(e.target.value as TaskPriority | "")}
-							aria-label="Task priority"
-						>
-							<option value="">None</option>
-							{PRIORITIES.map((p) => (
-								<option key={p} value={p}>
-									{p}
-								</option>
-							))}
-						</select>
+							onChange={(v) => setPriority(v as TaskPriority | "")}
+							ariaLabel="Task priority"
+							options={[
+								{ value: "", label: "None" },
+								...PRIORITIES.map((p) => ({ value: p, label: p })),
+							]}
+						/>
 					</label>
 
 					<label className={styles.field}>

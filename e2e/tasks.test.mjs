@@ -222,6 +222,31 @@ export async function run() {
 		s.check("first todo now completed", !!delta && delta.todos?.[0]?.status === "completed", JSON.stringify(delta?.todos ?? null));
 		s.check("progress badge shows 1/2", await c.eval(`!!${TASKS}.find(t=>t.textContent.includes("Delta"))?.textContent.includes("1/2")`));
 
+		// 9b. Custom Priority dropdown (replaces the native <select> in the editor).
+		//      Static options (None/low/medium/high/urgent), so this exercises the
+		//      new component with no model. Drives Gamma (from section 8, in Todo).
+		results("9b. Priority dropdown (custom select replacement)");
+		s.check("editor opened for Gamma", await c.eval(openEditor("Gamma")));
+		await sleep(300);
+		s.check("priority trigger is a <button>", await c.eval(`!!document.querySelector('button[aria-label="Task priority"]')`));
+		s.check("no native <select> remains for priority", await c.eval(`!document.querySelector('select[aria-label="Task priority"]')`));
+		s.check("opens on keyboard (ArrowDown)", await c.eval(`(() => { const b=document.querySelector('button[aria-label="Task priority"]'); if(!b) return false; b.focus(); b.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true})); return true; })()`));
+		await sleep(150);
+		s.check("keyboard-open shows a listbox", await c.eval(`!!document.querySelector('[role="listbox"]')`));
+		s.check("Escape closes the listbox", await c.eval(`(() => { const b=document.querySelector('button[aria-label="Task priority"]'); if(!b) return false; b.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})); return true; })()`));
+		await sleep(150);
+		s.check("listbox gone after Escape", await c.eval(`!document.querySelector('[role="listbox"]')`));
+		s.check("opens on click", await c.eval(`(() => { const b=document.querySelector('button[aria-label="Task priority"]'); if(!b) return false; b.click(); return true; })()`));
+		await sleep(150);
+		s.check("listbox exposes every priority", await c.eval(`(() => { const lb=document.querySelector('[role="listbox"]'); if(!lb) return false; const v=[...lb.querySelectorAll('[role="option"]')].map(o=>o.getAttribute('data-value')); return v.includes('') && v.includes('low') && v.includes('medium') && v.includes('high') && v.includes('urgent'); })()`));
+		s.check("clicking 'high' closes the listbox", await c.eval(`(() => { const o=document.querySelector('[role="listbox"] [data-value="high"]'); if(!o) return false; o.click(); return true; })()`));
+		await sleep(150);
+		s.check("listbox closed after selecting 'high'", await c.eval(`!document.querySelector('[role="listbox"]')`));
+		s.check("editor saved (priority)", await c.eval(saveEditor));
+		await sleep(500);
+		const gamma = (await serverBoard(boardId)).columns.flatMap((col) => col.tasks).find((t) => t.name === "Gamma");
+		s.check("server persisted priority 'high'", !!gamma && gamma.priority === "high", JSON.stringify(gamma?.priority ?? null));
+
 		// 10. Delete the board via the API; the sidebar must drop it over SSE.
 		results("10. Delete board");
 		await c.send("Page.navigate", { url: APP_URL + "/" });

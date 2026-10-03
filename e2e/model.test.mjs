@@ -13,8 +13,16 @@ const WORK = process.env.E2E_MODEL_WORK || "local-big/qwen3.8-27b";
 const DOWN = process.env.E2E_MODEL_DOWN || "local-small/gpt-oss-20b";
 const AGENT = process.env.E2E_AGENT || "code-reviewer";
 
-const setModel = (id) => `(() => { const s=document.querySelector('select[title="Model"]'); const set=Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value').set; set.call(s, ${JSON.stringify(id)}); s.dispatchEvent(new Event('change',{bubbles:true})); return s.value })()`;
-const setAgent = (id) => `(() => { const s=document.querySelector('select[title="Agent"]'); const set=Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value').set; set.call(s, ${JSON.stringify(id)}); s.dispatchEvent(new Event('change',{bubbles:true})); return s.value })()`;
+// Drive the custom dropdown (replaces the old native <select>): open the trigger
+// by its title, then click the option whose data-value matches. The listbox
+// renders on a separate (async) React pass, so open and pick are two evals with
+// a short settle between them.
+async function pickOption(c, title, id) {
+	const opened = await c.eval(`(() => { const b=document.querySelector('button[title=' + JSON.stringify(title) + ']'); if(!b) return false; b.click(); return true; })()`);
+	if (!opened) return false;
+	await sleep(150);
+	return await c.eval(`(() => { const o=document.querySelector('[data-value=' + JSON.stringify(id) + ']'); if(!o) return false; o.click(); return true; })()`);
+}
 const sendPrompt = (text) => `(() => { const ta=document.querySelector('textarea'); const set=Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value').set; set.call(ta, ${JSON.stringify(text)}); ta.dispatchEvent(new Event('input',{bubbles:true})); ta.focus(); ta.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,which:13,bubbles:true})); return 'submitted' })()`;
 
 async function openSession(c, id) {
@@ -27,7 +35,7 @@ async function streaming(c, s) {
 	const sid = (await newScratchSession("e2e stream")).id;
 	try {
 		await openSession(c, sid);
-		await c.eval(setModel(WORK));
+		await pickOption(c, "Model", WORK);
 		// A long-enough response so token streaming spans multiple polls (a tiny
 		// reply can complete before the first sample, making "growth" unobservable).
 		await c.eval(sendPrompt("List the first 30 prime numbers, one per line. Start from 2."));
@@ -68,7 +76,7 @@ async function errorState(c, s) {
 	c.on("Runtime.exceptionThrown", (p) => exc.push(p.exceptionDetails?.text || ""));
 	try {
 		await openSession(c, sid);
-		await c.eval(setModel(DOWN));
+		await pickOption(c, "Model", DOWN);
 		await c.eval(sendPrompt("hi"));
 		let rendered = false, cleanReply = false, hung = false;
 		for (let i = 0; i < 30; i++) {
@@ -81,7 +89,7 @@ async function errorState(c, s) {
 			}
 			if (i > 25) hung = true;
 		}
-		const stillAlive = await c.eval(`!!document.querySelector('textarea') && !!document.querySelector('select[title="Model"]')`);
+		const stillAlive = await c.eval(`!!document.querySelector('textarea') && !!document.querySelector('button[title="Model"]')`);
 		if (cleanReply && !rendered) {
 			console.log("  (skip error-render check: the 'down' model actually responded — no failing model available to exercise error rendering)");
 		} else {
@@ -100,8 +108,8 @@ async function permission(c, s) {
 	const sid = (await newScratchSession("e2e perm")).id;
 	try {
 		await openSession(c, sid);
-		await c.eval(setAgent(AGENT));
-		await c.eval(setModel(WORK));
+		await pickOption(c, "Agent", AGENT);
+		await pickOption(c, "Model", WORK);
 		await c.eval(sendPrompt('Run a bash command: execute "ls -la" to list files in the current directory, then tell me how many there are.'));
 		let shown = false;
 		for (let i = 0; i < 40; i++) {
@@ -126,7 +134,7 @@ async function question(c, s) {
 	const sid = (await newScratchSession("e2e question")).id;
 	try {
 		await openSession(c, sid);
-		await c.eval(setModel(WORK));
+		await pickOption(c, "Model", WORK);
 		await c.eval(sendPrompt('Use the question tool now to ask me a single multiple-choice question: "Which deployment target should I use?" with exactly three options: Staging, Production, and Both. Do not answer it yourself.'));
 		let shown = false;
 		for (let i = 0; i < 40; i++) {
