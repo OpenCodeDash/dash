@@ -2,7 +2,7 @@
 // assertions hold regardless of session content; content assertions (markdown,
 // tool cards) run against the most content-rich existing session.
 import { newPage, sleep, results } from "./cdp.mjs";
-import { Suite, pickRichSession, APP_URL } from "./lib.mjs";
+import { Suite, pickRichSession, APP_URL, authenticate } from "./lib.mjs";
 
 const btnByPredicate = (pred) => `(function(){
   const btns=[...document.querySelectorAll('button')];
@@ -32,8 +32,9 @@ const scrollInfo = `(function(){
 
 export async function run(suitesOut) {
 	const s = new Suite("structural");
+	const token = await authenticate();
 	const rich = await pickRichSession();
-	const c = await newPage("about:blank");
+	const c = await newPage("about:blank", { token });
 	const exc = [];
 	c.on("Runtime.exceptionThrown", (p) => exc.push(p.exceptionDetails?.text || ""));
 

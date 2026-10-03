@@ -23,7 +23,7 @@ export function SessionPage() {
 	// own. Re-resolved whenever the session goes busy/idle so a mid-session
 	// claim is picked up.
 	const linked = useSessionTask(sessionId, busy);
-	const todoCount = linked ? linked.task.todos.length : todos.length;
+	const todoCount = linked ? (linked.task.todos ?? []).length : todos.length;
 	const fileStatus = useFileStatus();
 	const [panel, setPanel] = useState<Panel>(null);
 

@@ -1,7 +1,7 @@
 // Session lifecycle via the UI directory picker: create, rename, delete.
 // Self-contained — creates its own scratch session in a temp dir and cleans up.
 import { newPage, sleep, results } from "./cdp.mjs";
-import { Suite, APP_URL, deleteSession } from "./lib.mjs";
+import { Suite, APP_URL, deleteSession, authenticate } from "./lib.mjs";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -35,7 +35,8 @@ export async function run() {
 	const scratchDir = mkdtempSync(join(tmpdir(), "opencode-e2e-"));
 	const groupKey = scratchDir.split("/").pop();
 
-	const c = await newPage(APP_URL);
+	const token = await authenticate();
+	const c = await newPage(APP_URL, { token });
 	await sleep(3000);
 
 	// A. Directory picker: navigate + create

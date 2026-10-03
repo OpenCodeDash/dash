@@ -13,18 +13,29 @@ export const E2E_ACCOUNT = { name: "e2e-dash", password: "e2e-dash-password" };
 let authToken = null;
 
 // Returns a bearer token for the shared e2e account, memoized per process.
+// Accounts are persisted in the backdash DB, so login is the steady-state path.
+// Registration is open only until the first account exists — after that the
+// backdash closes it with 403 — so a fresh database needs the first register to
+// mint the account. The e2e suites run in parallel worker processes, so that
+// first register races; retry login after a failed register to pick up the
+// account another process just created.
 export async function authenticate() {
 	if (authToken) return authToken;
 	const headers = { "content-type": "application/json" };
 	const body = JSON.stringify(E2E_ACCOUNT);
-	let res = await fetch(`${BOARD_URL}/auth/register`, { method: "POST", headers, body });
-	if (res.status === 409) {
-		res = await fetch(`${BOARD_URL}/auth/login`, { method: "POST", headers, body });
+	for (let attempt = 0; attempt < 6; attempt++) {
+		let res = await fetch(`${BOARD_URL}/auth/login`, { method: "POST", headers, body });
+		if (!res.ok) {
+			res = await fetch(`${BOARD_URL}/auth/register`, { method: "POST", headers, body });
+		}
+		if (res.ok) {
+			const session = await res.json();
+			authToken = session.token;
+			return authToken;
+		}
+		await new Promise((r) => setTimeout(r, 500));
 	}
-	if (!res.ok) throw new Error(`backdash auth failed: ${res.status}`);
-	const session = await res.json();
-	authToken = session.token;
-	return authToken;
+	throw new Error("backdash auth failed after retries");
 }
 
 // fetch with the shared bearer token attached.
