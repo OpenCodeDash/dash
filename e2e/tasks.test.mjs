@@ -5,7 +5,7 @@
 // so the suite works against those real columns. Needs the backdash server
 // (default :3000, BOARD_URL env).
 import { newPage, sleep, typeSel, results } from "./cdp.mjs";
-import { Suite, APP_URL, BOARD_URL } from "./lib.mjs";
+import { Suite, APP_URL, BOARD_URL, authenticate, authFetch } from "./lib.mjs";
 
 const BOARD = "e2e Tasks";
 const TASKS = `[...document.querySelectorAll('[data-task-id]')]`;
@@ -25,9 +25,9 @@ const waitEval = async (page, expr, timeout = 5000) => {
 
 async function deleteBoardsNamed(name) {
 	try {
-		const list = await fetch(`${BOARD_URL}/kanban`).then((r) => r.json());
+		const list = await authFetch(`${BOARD_URL}/kanban`).then((r) => r.json());
 		for (const b of list.filter((x) => x.name === name)) {
-			await fetch(`${BOARD_URL}/kanban/${b.id}`, { method: "DELETE" });
+			await authFetch(`${BOARD_URL}/kanban/${b.id}`, { method: "DELETE" });
 		}
 	} catch {}
 }
@@ -67,7 +67,7 @@ const dragColumn = (type, name) =>
 
 // Ordered task names per column, keyed by column name, straight from the server.
 async function serverTasks(boardId) {
-	const b = await fetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json());
+	const b = await authFetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json());
 	const out = {};
 	for (const c of b.columns) out[c.name] = c.tasks.map((t) => t.name);
 	return out;
@@ -77,7 +77,8 @@ export async function run() {
 	const s = new Suite("tasks");
 	await deleteBoardsNamed(BOARD); // idempotent start: clear leftovers from a failed run
 
-	const c = await newPage(`${APP_URL}/boards`);
+	const token = await authenticate();
+	const c = await newPage(`${APP_URL}/boards`, { token });
 	const exc = [];
 	c.on("Runtime.exceptionThrown", (p) => exc.push(p.exceptionDetails?.exception?.description || p.exceptionDetails?.text || "unknown"));
 	c.on("Page.javascriptDialogOpening", () => c.send("Page.handleJavaScriptDialog", { accept: false }).catch(() => {}));
@@ -165,19 +166,19 @@ export async function run() {
 		await sleep(400);
 		await c.eval(`(() => { const el=${TASKS}.find(t=>t.textContent.includes("Gamma")); el.querySelector('[title="Claim the task"]').click(); return true; })()`);
 		await sleep(400);
-		const g1 = (await fetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json())).columns.find((c) => c.name === "Todo").tasks.find((t) => t.name === "Gamma");
+		const g1 = (await authFetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json())).columns.find((c) => c.name === "Todo").tasks.find((t) => t.name === "Gamma");
 		s.check("task claimed (claimedBy set)", !!g1 && !!g1.claimedBy, JSON.stringify(g1?.claimedBy ?? null));
 		s.check("release button appears after claim", await c.eval(`!!${TASKS}.find(t=>t.textContent.includes("Gamma"))?.querySelector('[title="Release the task"]')`));
 		await c.eval(`(() => { const el=${TASKS}.find(t=>t.textContent.includes("Gamma")); const b=el.querySelector('[title="Release the task"]'); if(b) b.click(); return true; })()`);
 		await sleep(400);
-		const g2 = (await fetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json())).columns.find((c) => c.name === "Todo").tasks.find((t) => t.name === "Gamma");
+		const g2 = (await authFetch(`${BOARD_URL}/kanban/${boardId}`).then((r) => r.json())).columns.find((c) => c.name === "Todo").tasks.find((t) => t.name === "Gamma");
 		s.check("task released (claimedBy cleared)", !!g2 && !g2.claimedBy, JSON.stringify(g2?.claimedBy ?? null));
 
 		// 9. Delete the board via the API; the sidebar must drop it over SSE.
 		results("9. Delete board");
 		await c.send("Page.navigate", { url: APP_URL + "/" });
 		await sleep(400);
-		const del = await fetch(`${BOARD_URL}/kanban/${boardId}`, { method: "DELETE" });
+		const del = await authFetch(`${BOARD_URL}/kanban/${boardId}`, { method: "DELETE" });
 		s.check("board deleted via API", del.status === 204 || del.status === 200);
 		await sleep(800);
 		s.check("sidebar updated after delete", !(await c.eval(`document.querySelector("aside")?.textContent?.includes(${JSON.stringify(BOARD)})`)));
