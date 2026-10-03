@@ -15,6 +15,7 @@ import { BoardPage } from "./pages/board-page/board-page.page.tsx";
 import { BoardsPage } from "./pages/boards-page/boards-page.page.tsx";
 import { HomePage } from "./pages/home-page/home-page.page.tsx";
 import { SessionPage } from "./pages/session-page/session-page.page.tsx";
+import { SettingsPage } from "./pages/settings-page/settings-page.page.tsx";
 
 export default function App() {
 	const [token, setToken] = useState<string | null>(() => getStoredToken());
@@ -84,6 +85,7 @@ export default function App() {
 							<Route path="session/:sessionId" element={<SessionPage />} />
 							<Route path="boards" element={<BoardsPage />} />
 							<Route path="boards/:boardId" element={<BoardPage />} />
+							<Route path="settings" element={<SettingsPage token={token} />} />
 							<Route path="*" element={<Navigate to="/" replace />} />
 						</Routes>
 					</div>

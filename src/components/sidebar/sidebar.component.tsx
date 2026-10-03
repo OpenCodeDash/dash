@@ -131,6 +131,14 @@ export function Sidebar({ open, onNewSession, onShowServer, onSignOut }: Sidebar
 				<button
 					type="button"
 					className={styles.footerBtn}
+					onClick={() => navigate("/settings")}
+					title="Settings"
+				>
+					Settings
+				</button>
+				<button
+					type="button"
+					className={styles.footerBtn}
 					onClick={onSignOut}
 					title="Sign out of backdash"
 				>
