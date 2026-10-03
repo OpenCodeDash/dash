@@ -4,6 +4,9 @@
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+	min-height: 0;
+	max-height: min(45dvh, calc(100dvh - 260px));
+	overflow-y: auto;
 }
 
 .card {
