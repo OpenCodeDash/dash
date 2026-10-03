@@ -14,7 +14,7 @@
 	},
 	"dependencies": {
 		"react": "^19.2.8",
-		"react-backdash": "github:eyezahhhh/react-backdash#75325725aabb069794ff98ed7078d344d97a24e0",
+		"react-backdash": "github:eyezahhhh/react-backdash#297d5ee3977b89ee72bbf287ce6c1dc499477acf",
 		"react-dom": "^19.2.8",
 		"react-markdown": "^10.1.0",
 		"react-opencode": "github:eyezahhhh/react-opencode#944ad21919f7f1b9778ac0b4cad26dc217184356",

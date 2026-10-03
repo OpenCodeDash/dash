@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useFileStatus, useSession, useSessionBusy, useTodos } from "react-opencode";
+import { useSessionTask } from "react-backdash";
 import { FileDiffPanel } from "../../components/file-diff-panel/file-diff-panel.component.tsx";
 import { MessageList } from "../../components/message-list/message-list.component.tsx";
 import { PermissionPrompts } from "../../components/permission-prompts/permission-prompts.component.tsx";
 import { PromptComposer } from "../../components/prompt-composer/prompt-composer.component.tsx";
 import { QuestionPrompts } from "../../components/question-prompts/question-prompts.component.tsx";
+import { TaskTodosPanel } from "../../components/task-todos-panel/task-todos-panel.component.tsx";
 import { TodosPanel } from "../../components/todos-panel/todos-panel.component.tsx";
 import styles from "./session-page.module.scss";
 
@@ -16,6 +18,12 @@ export function SessionPage() {
 	const session = useSession(sessionId);
 	const busy = useSessionBusy(sessionId);
 	const todos = useTodos(sessionId);
+	// If this session is linked to a kanban task (it claimed one, or set its
+	// todos), the panel shows that task's checklist instead of the session's
+	// own. Re-resolved whenever the session goes busy/idle so a mid-session
+	// claim is picked up.
+	const linked = useSessionTask(sessionId, busy);
+	const todoCount = linked ? linked.task.todos.length : todos.length;
 	const fileStatus = useFileStatus();
 	const [panel, setPanel] = useState<Panel>(null);
 
@@ -53,7 +61,7 @@ export function SessionPage() {
 						className={`btn ${panel === "todos" ? "btn-active" : ""}`}
 						onClick={() => toggle("todos")}
 					>
-						Todos{todos.length > 0 ? ` (${todos.length})` : ""}
+						Todos{todoCount > 0 ? ` (${todoCount})` : ""}
 					</button>
 					<button
 						type="button"
@@ -75,7 +83,12 @@ export function SessionPage() {
 						</>
 					)}
 				</div>
-				{panel === "todos" && <TodosPanel sessionId={sessionId} />}
+				{panel === "todos" &&
+					(linked ? (
+						<TaskTodosPanel boardId={linked.boardId} task={linked.task} />
+					) : (
+						<TodosPanel sessionId={sessionId} />
+					))}
 				{panel === "files" && <FileDiffPanel sessionId={sessionId} />}
 			</div>
 		</div>
