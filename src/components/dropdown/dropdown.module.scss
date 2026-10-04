@@ -50,6 +50,17 @@
 	border-radius: var(--radius);
 	background: var(--bg-elevated);
 	box-shadow: var(--shadow-md);
+
+	// When the trigger sits closer to the bottom of the viewport than the top,
+	// open upwards instead (the component flips the direction and clamps the
+	// inline max-height to the available room, so the list never runs off
+	// screen vertically).
+	&.listUp {
+		top: auto;
+		bottom: 100%;
+		margin-top: 0;
+		margin-bottom: 4px;
+	}
 }
 
 .option {
