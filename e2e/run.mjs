@@ -16,6 +16,7 @@ import { run as runBench } from "./bench.test.mjs";
 import { run as runBoards } from "./boards.test.mjs";
 import { run as runTasks } from "./tasks.test.mjs";
 import { run as runMobileSwipe } from "./mobile-swipe.test.mjs";
+import { run as runDropdown } from "./dropdown.test.mjs";
 import { run as runModel } from "./model.test.mjs";
 
 const withModel = process.argv.includes("--with-model");
@@ -54,6 +55,7 @@ if (boardsOk) {
 	if (!(await runSuite("boards", runBoards))) failures.push("boards");
 	if (!(await runSuite("tasks", runTasks))) failures.push("tasks");
 	if (!(await runSuite("mobile-swipe", runMobileSwipe))) failures.push("mobile-swipe");
+	if (!(await runSuite("dropdown", runDropdown))) failures.push("dropdown");
 } else {
 	console.log("\n(skip boards checks — backdash server not reachable at " + BOARD_URL + ")");
 }
