@@ -10,6 +10,7 @@ import {
 } from "react-backdash";
 import { ConfirmDialog } from "../../components/confirm-dialog/confirm-dialog.component.tsx";
 import { TagManager } from "../../components/tag-manager/tag-manager.component.tsx";
+import { TaskDetailPanel } from "../../components/task-detail-panel/task-detail-panel.component.tsx";
 import { TaskEditor } from "../../components/task-editor/task-editor.component.tsx";
 import styles from "./board-page.module.scss";
 
@@ -35,7 +36,7 @@ function TaskCard({
 	onDropOnTask,
 	onTaskDragOver,
 	onDragEnd,
-	onEdit,
+	onSelect,
 }: {
 	task: Task;
 	column: Column;
@@ -49,11 +50,9 @@ function TaskCard({
 	onDropOnTask: (taskId: number, columnId: number) => void;
 	onTaskDragOver: (task: Task, columnId: number) => void;
 	onDragEnd: () => void;
-	onEdit: (task: Task) => void;
+	onSelect: (task: Task) => void;
 }) {
-	const { updateTask, deleteTask, claimTask, releaseTask } = useClientActions();
-	const [renaming, setRenaming] = useState(false);
-	const [title, setTitle] = useState("");
+	const { deleteTask } = useClientActions();
 
 	// A freshly-created task may not yet carry these arrays (the server omits
 	// empty lists and the optimistic create predates the server response), so
@@ -83,14 +82,6 @@ function TaskCard({
 		dependents.length > 0 ||
 		todos.length > 0;
 
-	function commitRename() {
-		setRenaming(false);
-		const trimmed = title.trim();
-		if (trimmed && trimmed !== task.name) {
-			void updateTask(boardId, column.id, task.id, { name: trimmed }).catch(() => undefined);
-		}
-	}
-
 	return (
 		<div
 			className={`${styles.task} ${isDragSource ? styles.dragging : ""} ${blocked ? styles.blocked : ""}`}
@@ -105,6 +96,7 @@ function TaskCard({
 				onDragStartTask(task, column.id);
 			}}
 			onDragEnd={onDragEnd}
+			onClick={() => onSelect(task)}
 			onDragOver={(e) => {
 				e.preventDefault();
 				e.stopPropagation();
@@ -124,46 +116,19 @@ function TaskCard({
 					<button
 						type="button"
 						className="icon-btn"
-						title="Edit task"
+						title="Delete task"
 						onClick={(e) => {
 							e.stopPropagation();
-							onEdit(task);
+							void deleteTask(boardId, column.id, task.id).catch(() => undefined);
 						}}
 					>
-						✎
-					</button>
-					<button type="button" className="icon-btn" title="Delete task" onClick={() => void deleteTask(boardId, column.id, task.id).catch(() => undefined)}>
 						✕
 					</button>
 				</div>
 			</div>
-			{renaming ? (
-				<input
-					className={styles.rename}
-					value={title}
-					autoFocus
-					draggable={false}
-					onClick={(e) => e.stopPropagation()}
-					onChange={(e) => setTitle(e.target.value)}
-					onBlur={commitRename}
-					onKeyDown={(e) => {
-						if (e.key === "Enter") commitRename();
-						if (e.key === "Escape") setRenaming(false);
-					}}
-				/>
-			) : (
-				<span
-					className={styles.taskName}
-					data-task-name={task.id}
-					onDoubleClick={() => {
-						setTitle(task.name);
-						setRenaming(true);
-					}}
-					title="Double-click to rename"
-				>
-					{task.name}
-				</span>
-			)}
+			<span className={styles.taskName} data-task-name={task.id}>
+				{task.name}
+			</span>
 			{task.description && <div className={styles.taskDesc}>{task.description}</div>}
 			{hasBadges && (
 				<div className={styles.badges}>
@@ -216,30 +181,11 @@ function TaskCard({
 					)}
 				</div>
 			)}
-			<div className={styles.taskMeta}>
-				{task.claimedBy ? (
-					<>
-						<span className={styles.claimedBadge}>{task.claimedBy}</span>
-						<button
-							type="button"
-							className="btn btn-ghost"
-							title="Release the task"
-							onClick={() => void releaseTask(boardId, column.id, task.id).catch(() => undefined)}
-						>
-							Release
-						</button>
-					</>
-				) : column.isQueue ? (
-					<button
-						type="button"
-						className="btn btn-ghost"
-						title="Claim the task"
-						onClick={() => void claimTask(boardId, column.id, task.id).catch(() => undefined)}
-					>
-						Claim
-					</button>
-				) : null}
-			</div>
+			{task.claimedBy && (
+				<div className={styles.taskMeta}>
+					<span className={styles.claimedBadge}>{task.claimedBy}</span>
+				</div>
+			)}
 		</div>
 	);
 }
@@ -259,7 +205,7 @@ function ColumnCard({
 	onTaskDragOver,
 	onColumnDragOver,
 	onDragEnd,
-	onEdit,
+	onSelect,
 }: {
 	column: Column;
 	colIndex: number;
@@ -275,7 +221,7 @@ function ColumnCard({
 	onTaskDragOver: (task: Task, columnId: number) => void;
 	onColumnDragOver: (columnId: number) => void;
 	onDragEnd: () => void;
-	onEdit: (task: Task) => void;
+	onSelect: (task: Task) => void;
 }) {
 	const { updateColumn, deleteColumn, createTask } = useClientActions();
 	const [renaming, setRenaming] = useState(false);
@@ -412,7 +358,7 @@ function ColumnCard({
 								onDropOnTask={onDropOnTask}
 								onTaskDragOver={onTaskDragOver}
 								onDragEnd={onDragEnd}
-								onEdit={onEdit}
+								onSelect={onSelect}
 							/>
 						</Fragment>
 					))}
@@ -460,6 +406,7 @@ export function BoardPage() {
 	const [dropTarget, setDropTarget] = useState<{ columnId: number; position: number | null } | null>(null);
 	const [confirming, setConfirming] = useState(false);
 	const [editing, setEditing] = useState<{ columnId: number; taskId: number } | null>(null);
+	const [detailId, setDetailId] = useState<number | null>(null);
 	const [tagsOpen, setTagsOpen] = useState(false);
 	const notFound = missingId === boardId;
 
@@ -469,6 +416,20 @@ export function BoardPage() {
 				.find((c) => c.id === editing.columnId)
 				?.tasks.find((t) => t.id === editing.taskId) ?? null)
 		: null;
+
+	// Resolve the detail panel's task by id across the whole board (so it keeps
+	// tracking the task across moves) together with its column, which carries
+	// the queue flag that gates claiming.
+	let detailRef: { task: Task; column: Column } | null = null;
+	if (detailId !== null) {
+		for (const column of board?.columns ?? []) {
+			const task = column.tasks.find((t) => t.id === detailId);
+			if (task) {
+				detailRef = { task, column };
+				break;
+			}
+		}
+	}
 
 	// id -> name and id -> column index across the whole board, so dependency
 	// badges can name their related tasks and the blocked state can tell whether
@@ -490,6 +451,17 @@ export function BoardPage() {
 			if (error instanceof BackdashError && error.status === 404) setMissingId(boardId);
 		});
 	}, [client, boardId]);
+
+	// Close the detail drawer on Escape, unless the edit modal is open as the
+	// top overlay (the modal runs its own Escape handler).
+	useEffect(() => {
+		if (detailId === null || editing) return;
+		function onKey(e: KeyboardEvent) {
+			if (e.key === "Escape") setDetailId(null);
+		}
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [detailId, editing]);
 
 	// Reorder columns; `targetId` null means "dropped outside a column" (go to end).
 	function handleColumnDrop(targetId: number | null) {
@@ -659,7 +631,7 @@ export function BoardPage() {
 								setDrag(null);
 								setDropTarget(null);
 							}}
-							onEdit={(task) => setEditing({ columnId: task.columnId, taskId: task.id })}
+							onSelect={(task) => setDetailId(task.id)}
 						/>
 					))}
 					{board.columns.length === 0 && (
@@ -695,6 +667,18 @@ export function BoardPage() {
 					task={editingTask}
 					open
 					onClose={() => setEditing(null)}
+				/>
+			)}
+			{detailRef && (
+				<TaskDetailPanel
+					key={`detail-${detailRef.task.id}`}
+					boardId={board.id}
+					task={detailRef.task}
+					isQueue={detailRef.column.isQueue}
+					onClose={() => setDetailId(null)}
+					onEdit={() =>
+						setEditing({ columnId: detailRef.task.columnId, taskId: detailRef.task.id })
+					}
 				/>
 			)}
 		</div>
