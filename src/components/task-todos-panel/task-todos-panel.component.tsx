@@ -28,7 +28,18 @@ const STATUS_ICON: Record<TaskTodoStatus, string> = {
 
 // The checklist of the kanban task the session is working on. Shown in place of
 // the session's own todos, and editable (writes straight back to the board).
-export function TaskTodosPanel({ boardId, task }: { boardId: string; task: Task }) {
+// `inline` drops the side-panel shell so it can be embedded in another
+// container (e.g. the task detail drawer); the default keeps the standalone
+// panel used by the session page.
+export function TaskTodosPanel({
+	boardId,
+	task,
+	variant = "panel",
+}: {
+	boardId: string;
+	task: Task;
+	variant?: "panel" | "inline";
+}) {
 	const { updateTask } = useClientActions();
 	const [newTodo, setNewTodo] = useState("");
 	const [editing, setEditing] = useState<number | null>(null);
@@ -73,6 +84,73 @@ export function TaskTodosPanel({ boardId, task }: { boardId: string; task: Task 
 		setEditing(null);
 	}
 
+	const body = (
+		<div className={variant === "inline" ? styles.inline : "panel-body"}>
+			{todos.length === 0 ? (
+				<p className="panel-empty">No todos yet.</p>
+			) : (
+				<ul className={styles.list}>
+					{todos.map((todo, i) => (
+						<li key={i} className={`${styles.todo} ${styles[todo.status]}`}>
+							<button
+								type="button"
+								className={styles.status}
+								aria-label={STATUS_LABEL[todo.status]}
+								title={STATUS_LABEL[todo.status]}
+								onClick={() => cycle(i)}
+							>
+								{STATUS_ICON[todo.status]}
+							</button>
+							{editing === i ? (
+								<input
+									className={styles.input}
+									value={draft}
+									autoFocus
+									aria-label="Edit todo"
+									onChange={(e) => setDraft(e.target.value)}
+									onBlur={commitEdit}
+									onKeyDown={(e) => {
+										if (e.key === "Enter") commitEdit();
+										if (e.key === "Escape") setEditing(null);
+									}}
+								/>
+							) : (
+								<span
+									className={styles.content}
+									title="Double-click to edit"
+									onDoubleClick={() => startEdit(i)}
+								>
+									{todo.content}
+								</span>
+							)}
+							<button
+								type="button"
+								className="icon-btn"
+								aria-label="Remove todo"
+								onClick={() => remove(i)}
+							>
+								✕
+							</button>
+						</li>
+					))}
+				</ul>
+			)}
+			<form className={styles.add} onSubmit={add}>
+				<input
+					value={newTodo}
+					onChange={(e) => setNewTodo(e.target.value)}
+					placeholder="Add todo…"
+					aria-label="New todo"
+				/>
+				<button type="submit" className="btn btn-primary" disabled={!newTodo.trim()}>
+					Add
+				</button>
+			</form>
+		</div>
+	);
+
+	if (variant === "inline") return body;
+
 	return (
 		<aside className="panel">
 			<div className="panel-head">
@@ -83,68 +161,7 @@ export function TaskTodosPanel({ boardId, task }: { boardId: string; task: Task 
 					</span>
 				)}
 			</div>
-			<div className="panel-body">
-				{todos.length === 0 ? (
-					<p className="panel-empty">No todos yet.</p>
-				) : (
-					<ul className={styles.list}>
-						{todos.map((todo, i) => (
-							<li key={i} className={`${styles.todo} ${styles[todo.status]}`}>
-								<button
-									type="button"
-									className={styles.status}
-									aria-label={STATUS_LABEL[todo.status]}
-									title={STATUS_LABEL[todo.status]}
-									onClick={() => cycle(i)}
-								>
-									{STATUS_ICON[todo.status]}
-								</button>
-								{editing === i ? (
-									<input
-										className={styles.input}
-										value={draft}
-										autoFocus
-										aria-label="Edit todo"
-										onChange={(e) => setDraft(e.target.value)}
-										onBlur={commitEdit}
-										onKeyDown={(e) => {
-											if (e.key === "Enter") commitEdit();
-											if (e.key === "Escape") setEditing(null);
-										}}
-									/>
-								) : (
-									<span
-										className={styles.content}
-										title="Double-click to edit"
-										onDoubleClick={() => startEdit(i)}
-									>
-										{todo.content}
-									</span>
-								)}
-								<button
-									type="button"
-									className="icon-btn"
-									aria-label="Remove todo"
-									onClick={() => remove(i)}
-								>
-									✕
-								</button>
-							</li>
-						))}
-					</ul>
-				)}
-				<form className={styles.add} onSubmit={add}>
-					<input
-						value={newTodo}
-						onChange={(e) => setNewTodo(e.target.value)}
-						placeholder="Add todo…"
-						aria-label="New todo"
-					/>
-					<button type="submit" className="btn btn-primary" disabled={!newTodo.trim()}>
-						Add
-					</button>
-				</form>
-			</div>
+			{body}
 		</aside>
 	);
 }

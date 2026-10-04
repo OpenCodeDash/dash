@@ -4,6 +4,13 @@
 	color: var(--text-faint);
 }
 
+// Standalone-panel body padding is provided by `.panel-body`; when embedded
+// inline the surrounding container owns the spacing, so only the stack remains.
+.inline {
+	display: flex;
+	flex-direction: column;
+}
+
 .list {
 	list-style: none;
 	margin: 0;

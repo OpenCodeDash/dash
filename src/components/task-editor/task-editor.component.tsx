@@ -90,8 +90,7 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 		);
 	}
 
-	function addTodo(e: React.FormEvent) {
-		e.preventDefault();
+	function addTodo() {
 		const trimmed = newTodo.trim();
 		if (!trimmed) return;
 		setTodos((prev) => [...prev, { content: trimmed, status: "pending" }]);
@@ -247,17 +246,30 @@ export function TaskEditor({ boardId, task, open, onClose }: TaskEditorProps) {
 							))}
 						</ul>
 					)}
-					<form className={styles.todoAdd} onSubmit={addTodo}>
+					{/* Not a <form>: the editor itself is a form, and a nested form's
+					    submit would submit the editor instead of adding a todo. */}
+					<div className={styles.todoAdd}>
 						<input
 							value={newTodo}
 							onChange={(e) => setNewTodo(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") {
+									e.preventDefault();
+									addTodo();
+								}
+							}}
 							placeholder={todos.length === 0 ? "Add a checklist item…" : "Add todo…"}
 							aria-label="New todo"
 						/>
-						<button type="submit" className="btn btn-primary" disabled={!newTodo.trim()}>
+						<button
+							type="button"
+							className="btn btn-primary"
+							disabled={!newTodo.trim()}
+							onClick={addTodo}
+						>
 							Add
 						</button>
-					</form>
+					</div>
 				</div>
 
 				<div className={styles.grid}>
