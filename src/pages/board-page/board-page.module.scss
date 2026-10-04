@@ -327,3 +327,31 @@
 	background: var(--green-soft);
 }
 
+// On mobile, drop the page's horizontal padding so the columns row spans the
+// full width and scrolls edge to edge; the header and the scroll track carry
+// their own small gutter instead.
+@media (max-width: 900px) {
+	.page {
+		padding: 12px 0 16px;
+	}
+
+	.header {
+		padding: 0 12px;
+		margin-bottom: 16px;
+		gap: 8px;
+	}
+
+	.title {
+		font-size: 18px;
+	}
+
+	.columns {
+		gap: 10px;
+		padding: 0 12px 8px;
+	}
+
+	.hint {
+		padding: 16px 12px;
+	}
+}
+
