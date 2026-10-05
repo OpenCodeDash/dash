@@ -32,6 +32,24 @@ function resolveModel(message: AssistantMessage): SessionModelRef | undefined {
 	return undefined;
 }
 
+// The router-cost plugin stamps the real upstream model onto the step's text or
+// reasoning part (`metadata.router`); react-opencode's Part type doesn't model
+// that field, so read it through a local shape.
+type RouterStamp = {
+	route?: string;
+	model?: string;
+	upstreamModel?: string;
+};
+
+function readRouterStamp(parts: Part[]): RouterStamp | undefined {
+	for (const part of parts) {
+		if (part.type !== "text" && part.type !== "reasoning") continue;
+		const router = (part as { metadata?: { router?: RouterStamp } }).metadata?.router;
+		if (router) return router;
+	}
+	return undefined;
+}
+
 interface MessageItemProps {
 	message: Message;
 	streaming?: boolean;
@@ -59,11 +77,20 @@ export function MessageItem({ message, streaming = false }: MessageItemProps) {
 	}
 
 	const model = resolveModel(message);
+	const router = readRouterStamp(parts);
 
 	return (
 		<div className={styles.msg}>
 			<div className={styles.role}>
 				{model ? `${model.providerID}/${model.id}` : "Assistant"}
+				{router?.upstreamModel && (
+					<span
+						className={`chip ${styles.upstream}`}
+						title={router.route ? `route ${router.route}` : undefined}
+					>
+						{router.upstreamModel}
+					</span>
+				)}
 			</div>
 			<div className={styles.body}>
 				{parts.map((part) => (
