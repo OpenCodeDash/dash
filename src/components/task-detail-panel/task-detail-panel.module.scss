@@ -28,12 +28,35 @@
 	min-width: 0;
 }
 
+.titleRow {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 8px;
+	min-width: 0;
+}
+
 .title {
+	flex: 1;
+	min-width: 0;
 	margin: 0;
 	font-size: 17px;
 	font-weight: var(--weight-semibold);
 	overflow-wrap: anywhere;
 	word-break: break-word;
+}
+
+.taskNumber {
+	flex-shrink: 0;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	font-weight: var(--weight-semibold);
+	line-height: 1.6;
+	color: var(--text-faint);
+	padding: 0 7px;
+	border-radius: var(--radius-full);
+	border: 1px solid var(--border-strong);
+	background: var(--bg-elevated);
 }
 
 .claimedBy {
