@@ -3,9 +3,11 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import {
 	useMessageParts,
+	type AssistantMessage,
 	type FilePart,
 	type Message,
 	type Part,
+	type SessionModelRef,
 	type TextPart,
 } from "react-opencode";
 import { SubagentCard } from "../subagent-card/subagent-card.component.tsx";
@@ -14,6 +16,21 @@ import styles from "./message-item.module.scss";
 
 const isText = (p: Part): p is TextPart => p.type === "text";
 const isFile = (p: Part): p is FilePart => p.type === "file";
+
+type AssistantModelCarrier = {
+	model?: SessionModelRef;
+	providerID?: string;
+	modelID?: string;
+};
+
+function resolveModel(message: AssistantMessage): SessionModelRef | undefined {
+	const carrier = message as AssistantMessage & AssistantModelCarrier;
+	if (carrier.model) return carrier.model;
+	if (carrier.providerID && carrier.modelID) {
+		return { providerID: carrier.providerID, id: carrier.modelID };
+	}
+	return undefined;
+}
 
 interface MessageItemProps {
 	message: Message;
@@ -41,10 +58,12 @@ export function MessageItem({ message, streaming = false }: MessageItemProps) {
 		);
 	}
 
+	const model = resolveModel(message);
+
 	return (
 		<div className={styles.msg}>
 			<div className={styles.role}>
-				{message.model ? `${message.model.providerID}/${message.model.id}` : "Assistant"}
+				{model ? `${model.providerID}/${model.id}` : "Assistant"}
 			</div>
 			<div className={styles.body}>
 				{parts.map((part) => (
