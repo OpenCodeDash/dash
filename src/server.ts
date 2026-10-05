@@ -52,6 +52,24 @@ export async function createSessionInDirectory(
 	return (await res.json()) as Session;
 }
 
+/**
+ * Request manual compaction of a session. opencode exposes this only on the v2
+ * API (`/api/session/:id/compact`), which react-opencode does not wrap, so hit
+ * it directly. The response acknowledges the request; it does not wait for the
+ * summary, and opencode emits `session.compaction.*` events as it runs.
+ */
+export async function compactSession(url: string, sessionId: string): Promise<void> {
+	const res = await fetch(`${url}/api/session/${encodeURIComponent(sessionId)}/compact`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: "{}",
+	});
+	if (!res.ok) {
+		const body = await res.text().catch(() => "");
+		throw new Error(`Failed to compact session (${res.status}) ${body.slice(0, 200)}`.trim());
+	}
+}
+
 export async function fetchPath(url: string): Promise<PathInfo> {
 	const res = await fetch(`${url}/path`);
 	if (!res.ok) throw new Error(`Failed to read path (${res.status})`);
