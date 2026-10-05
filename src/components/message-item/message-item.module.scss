@@ -8,6 +8,7 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	min-height: 16px;
 	font-size: 11px;
 	font-weight: 600;
 	text-transform: uppercase;
@@ -15,9 +16,17 @@
 	color: var(--text-faint);
 }
 
-.upstream {
+/* Pin the chip to the same 16px line box as the role label so it appearing
+   doesn't change the row height (and shift the page). */
+.role .upstream {
+	display: inline-flex;
+	align-items: center;
+	box-sizing: border-box;
+	height: 16px;
+	padding: 0 6px;
 	text-transform: none;
 	letter-spacing: normal;
+	font-size: 10px;
 }
 
 .bubble {
