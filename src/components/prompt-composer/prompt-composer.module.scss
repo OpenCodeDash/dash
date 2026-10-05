@@ -12,6 +12,7 @@
 }
 
 .composer {
+	position: relative;
 	border: 1px solid var(--border-strong);
 	border-radius: var(--radius);
 	background: var(--bg-panel);
@@ -23,6 +24,54 @@
 	&:focus-within {
 		border-color: var(--accent);
 	}
+}
+
+.slashMenu {
+	position: absolute;
+	left: 10px;
+	right: 10px;
+	bottom: 100%;
+	margin-bottom: 4px;
+	max-height: 288px;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	background: var(--bg-panel);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	box-shadow: var(--shadow-lg);
+	z-index: 20;
+}
+
+.slashItem {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 7px 10px;
+	border: none;
+	background: transparent;
+	color: var(--text);
+	text-align: left;
+	cursor: pointer;
+
+	&:hover,
+	&.slashItemActive {
+		background: var(--bg-hover);
+	}
+}
+
+.slashName {
+	flex: none;
+	font-weight: 600;
+	color: var(--accent);
+}
+
+.slashDesc {
+	font-size: 12px;
+	color: var(--text-dim);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .input {
