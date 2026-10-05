@@ -37,6 +37,7 @@ function TaskCard({
 	onTaskDragOver,
 	onDragEnd,
 	onSelect,
+	onEdit,
 }: {
 	task: Task;
 	column: Column;
@@ -51,6 +52,7 @@ function TaskCard({
 	onTaskDragOver: (task: Task, columnId: number) => void;
 	onDragEnd: () => void;
 	onSelect: (task: Task) => void;
+	onEdit: (task: Task) => void;
 }) {
 	const { deleteTask } = useClientActions();
 
@@ -97,6 +99,11 @@ function TaskCard({
 			}}
 			onDragEnd={onDragEnd}
 			onClick={() => onSelect(task)}
+			onContextMenu={(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				onEdit(task);
+			}}
 			onDragOver={(e) => {
 				e.preventDefault();
 				e.stopPropagation();
@@ -206,6 +213,7 @@ function ColumnCard({
 	onColumnDragOver,
 	onDragEnd,
 	onSelect,
+	onEdit,
 }: {
 	column: Column;
 	colIndex: number;
@@ -222,6 +230,7 @@ function ColumnCard({
 	onColumnDragOver: (columnId: number) => void;
 	onDragEnd: () => void;
 	onSelect: (task: Task) => void;
+	onEdit: (task: Task) => void;
 }) {
 	const { updateColumn, deleteColumn, createTask } = useClientActions();
 	const [renaming, setRenaming] = useState(false);
@@ -359,6 +368,7 @@ function ColumnCard({
 								onTaskDragOver={onTaskDragOver}
 								onDragEnd={onDragEnd}
 								onSelect={onSelect}
+								onEdit={onEdit}
 							/>
 						</Fragment>
 					))}
@@ -632,6 +642,9 @@ export function BoardPage() {
 								setDropTarget(null);
 							}}
 							onSelect={(task) => setDetailId(task.id)}
+							onEdit={(task) =>
+								setEditing({ columnId: task.columnId, taskId: task.id })
+							}
 						/>
 					))}
 					{board.columns.length === 0 && (
