@@ -59,7 +59,7 @@ function SessionPreview({ sessionId }: { sessionId: string }) {
 		<section className={styles.section}>
 			<div className={styles.sectionHead}>
 				<h3 className={styles.label}>Session</h3>
-				{busy && <span className="chip chip-subagent">working…</span>}
+				{busy && <span className={styles.statusPill}>working…</span>}
 			</div>
 			<div className={styles.sessionTitle}>{session?.title ?? "Session"}</div>
 			{recent.length === 0 ? (
@@ -215,7 +215,15 @@ export function TaskDetailPanel({ boardId, task, isQueue, onClose, onEdit }: Tas
 									<dt>Tags</dt>
 									<dd className={styles.tagWrap}>
 										{tags.map((tag) => (
-											<span key={tag.id} className="chip">
+											<span
+												key={tag.id}
+												className={`${styles.tag} ${tag.color ? styles.tagColored : ""}`}
+												style={
+													tag.color
+														? { borderColor: tag.color, color: tag.color }
+														: undefined
+												}
+											>
 												{tag.name}
 											</span>
 										))}

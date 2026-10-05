@@ -140,14 +140,44 @@
 	gap: 6px;
 }
 
-.prio {
+/* Shared pill base: the same shape/typography for every pill in the panel,
+   so tags, priority and status read as one family regardless of colour. */
+.pill {
+	display: inline-block;
 	font-size: 10px;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	font-weight: var(--weight-semibold);
 	padding: 1px 7px;
 	border-radius: var(--radius-full);
 	border: 1px solid transparent;
+	white-space: nowrap;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.prio {
+	composes: pill;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	font-weight: var(--weight-semibold);
+}
+
+.tag {
+	composes: pill;
+	border-color: var(--border-strong);
+	color: var(--text-dim);
+}
+
+.tagColored {
+	border-color: currentColor;
+}
+
+.statusPill {
+	composes: pill;
+	color: var(--accent);
+	border-color: var(--accent-line);
+	background: var(--accent-soft);
+	font-size: 12px;
+	padding: 2px 8px;
 }
 
 .prio_low {
