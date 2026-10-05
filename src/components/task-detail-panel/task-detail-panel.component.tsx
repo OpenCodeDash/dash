@@ -119,7 +119,10 @@ export function TaskDetailPanel({ boardId, task, isQueue, onClose, onEdit }: Tas
 		<aside className={styles.panel} role="dialog" aria-label={`Details for ${task.name}`}>
 			<header className={styles.head}>
 				<div className={styles.headMain}>
-					<h2 className={styles.title}>{task.name}</h2>
+					<div className={styles.titleRow}>
+						<span className={styles.taskNumber}>#{task.id}</span>
+						<h2 className={styles.title}>{task.name}</h2>
+					</div>
 					{task.claimedBy && (
 						<span className={styles.claimedBy}>
 							claimed by <strong>{task.claimedBy}</strong>
