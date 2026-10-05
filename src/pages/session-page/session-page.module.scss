@@ -75,6 +75,38 @@
 	flex-direction: column;
 }
 
+/* Sits between the transcript and the composer, mirroring opencode's revert
+   dock: summarizes the rolled-back messages and offers a one-click restore. */
+.revertDock {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin: 0 16px 8px;
+	padding: 8px 12px;
+	border: 1px solid var(--yellow-line);
+	background: var(--yellow-soft);
+	border-radius: var(--radius);
+	flex-shrink: 0;
+}
+
+.revertText {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--yellow);
+}
+
+.actionError {
+	margin: 0 16px 8px;
+	padding: 8px 12px;
+	border: 1px solid var(--red-line);
+	background: var(--red-soft);
+	border-radius: var(--radius);
+	color: var(--red);
+	font-size: 13px;
+	flex-shrink: 0;
+}
+
 @media (max-width: 900px) {
 	.header {
 		padding: 8px 12px;

@@ -70,6 +70,85 @@ export async function compactSession(url: string, sessionId: string): Promise<vo
 	}
 }
 
+/**
+ * Session-scoped opencode endpoints are instance-scoped: the server resolves
+ * the session against the working directory given by `?directory=`. The dashboard
+ * is multi-directory, so callers pass the session's own directory.
+ */
+function sessionQuery(directory?: string): string {
+	return directory ? `?directory=${encodeURIComponent(directory)}` : "";
+}
+
+async function postSession<T>(url: string, path: string, directory: string | undefined, body: unknown): Promise<T> {
+	const res = await fetch(`${url}${path}${sessionQuery(directory)}`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body ?? {}),
+	});
+	if (!res.ok) {
+		const text = await res.text().catch(() => "");
+		throw new Error(`Request failed (${res.status}) ${text.slice(0, 200)}`.trim());
+	}
+	const text = await res.text();
+	return (text.length > 0 ? JSON.parse(text) : null) as T;
+}
+
+/**
+ * Fork a session at a message: opencode clones every message before `messageID`
+ * into a brand new session and returns it. react-opencode wraps the endpoint but
+ * drops the `?directory=` scope, which multi-directory sessions need, so hit it
+ * directly.
+ */
+export async function forkSessionFromMessage(
+	url: string,
+	sessionId: string,
+	messageID: string,
+	directory?: string,
+): Promise<Session> {
+	return postSession<Session>(
+		url,
+		`/session/${encodeURIComponent(sessionId)}/fork`,
+		directory,
+		{ messageID },
+	);
+}
+
+/**
+ * Rewind a session to `messageID`. opencode records the revert point on the
+ * session (messages stay until the next prompt cleans them up) and restores the
+ * working-tree snapshot taken before the message. react-opencode's
+ * `revertSession(id)` sends no body, but the API requires a `messageID`, so this
+ * goes direct.
+ */
+export async function revertSessionToMessage(
+	url: string,
+	sessionId: string,
+	messageID: string,
+	directory?: string,
+	partID?: string,
+): Promise<Session> {
+	return postSession<Session>(
+		url,
+		`/session/${encodeURIComponent(sessionId)}/revert`,
+		directory,
+		partID ? { messageID, partID } : { messageID },
+	);
+}
+
+/** Clear a session's revert point and restore the snapshot it captured. */
+export async function restoreSession(
+	url: string,
+	sessionId: string,
+	directory?: string,
+): Promise<Session> {
+	return postSession<Session>(
+		url,
+		`/session/${encodeURIComponent(sessionId)}/unrevert`,
+		directory,
+		{},
+	);
+}
+
 export async function fetchPath(url: string): Promise<PathInfo> {
 	const res = await fetch(`${url}/path`);
 	if (!res.ok) throw new Error(`Failed to read path (${res.status})`);
