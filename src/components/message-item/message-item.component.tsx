@@ -53,15 +53,76 @@ function readRouterStamp(parts: Part[]): RouterStamp | undefined {
 interface MessageItemProps {
 	message: Message;
 	streaming?: boolean;
+	/** Message sits at or after the session's revert point. */
+	reverted?: boolean;
+	/** Disable fork/revert while the session is busy or an action is in flight. */
+	actionsDisabled?: boolean;
+	onFork?: (message: Message) => void;
+	onRevert?: (message: Message) => void;
 }
 
-export function MessageItem({ message, streaming = false }: MessageItemProps) {
+function MessageActions({
+	message,
+	disabled,
+	onFork,
+	onRevert,
+}: {
+	message: Message;
+	disabled?: boolean;
+	onFork?: (message: Message) => void;
+	onRevert?: (message: Message) => void;
+}) {
+	if (!onFork && !onRevert) return null;
+	return (
+		<div className={styles.actions}>
+			{onFork && (
+				<button
+					type="button"
+					className={styles.action}
+					title="Fork to a new session from here"
+					disabled={disabled}
+					onClick={() => onFork(message)}
+				>
+					Fork
+				</button>
+			)}
+			{onRevert && (
+				<button
+					type="button"
+					className={styles.action}
+					title="Revert to just before this message"
+					disabled={disabled}
+					onClick={() => onRevert(message)}
+				>
+					Revert
+				</button>
+			)}
+		</div>
+	);
+}
+
+export function MessageItem({
+	message,
+	streaming = false,
+	reverted = false,
+	actionsDisabled,
+	onFork,
+	onRevert,
+}: MessageItemProps) {
 	const parts = useMessageParts(message.id);
 
 	if (message.role === "user") {
 		return (
-			<div className={styles.msg}>
-				<div className={styles.role}>You</div>
+			<div className={`${styles.msg} ${reverted ? styles.reverted : ""}`}>
+				<div className={styles.role}>
+					<span>You</span>
+					<MessageActions
+						message={message}
+						disabled={actionsDisabled}
+						onFork={onFork}
+						onRevert={onRevert}
+					/>
+				</div>
 				<div className={styles.bubble}>
 					{parts.filter(isText).map((p) => (
 						<p key={p.id}>{p.text}</p>
@@ -80,9 +141,9 @@ export function MessageItem({ message, streaming = false }: MessageItemProps) {
 	const router = readRouterStamp(parts);
 
 	return (
-		<div className={styles.msg}>
+		<div className={`${styles.msg} ${reverted ? styles.reverted : ""}`}>
 			<div className={styles.role}>
-				{model ? `${model.providerID}/${model.id}` : "Assistant"}
+				<span>{model ? `${model.providerID}/${model.id}` : "Assistant"}</span>
 				{router?.upstreamModel && (
 					<span
 						className={`chip ${styles.upstream}`}

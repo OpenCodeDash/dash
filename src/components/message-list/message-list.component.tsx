@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
-import { useSessionBusy, useStore } from "react-opencode";
+import { useSessionBusy, useStore, type Message } from "react-opencode";
 import { useMessageWindow } from "../../hooks/use-message-window.ts";
 import { MessageItem } from "../message-item/message-item.component.tsx";
 import styles from "./message-list.module.scss";
@@ -9,7 +9,22 @@ import styles from "./message-list.module.scss";
 // messages prepended so react-virtuoso can preserve the scroll position.
 const START_INDEX = 100000;
 
-export function MessageList({ sessionId }: { sessionId: string }) {
+interface MessageListProps {
+	sessionId: string;
+	/** Session's revert point; messages from here on are rolled back. */
+	revertMessageID?: string;
+	actionsDisabled?: boolean;
+	onFork?: (message: Message) => void;
+	onRevert?: (message: Message) => void;
+}
+
+export function MessageList({
+	sessionId,
+	revertMessageID,
+	actionsDisabled,
+	onFork,
+	onRevert,
+}: MessageListProps) {
 	const { messages, loaded, hasMore, loadOlder } = useMessageWindow(sessionId);
 	const busy = useSessionBusy(sessionId);
 	const version = useStore((s) => s.version);
@@ -19,6 +34,15 @@ export function MessageList({ sessionId }: { sessionId: string }) {
 	const [firstItemIndex, setFirstItemIndex] = useState(START_INDEX);
 
 	const lastId = messages[messages.length - 1]?.id;
+
+	// Messages at/after the revert point are still in the transcript but will be
+	// dropped on the next prompt; dim them and let the page offer "restore".
+	const revertedIds = useMemo(() => {
+		if (!revertMessageID) return null;
+		const at = messages.findIndex((m) => m.id === revertMessageID);
+		if (at < 0) return null;
+		return new Set(messages.slice(at).map((m) => m.id));
+	}, [messages, revertMessageID]);
 
 	// Keep the view pinned to the newest content while streaming, unless the user
 	// has scrolled up to read earlier messages.
@@ -54,7 +78,14 @@ export function MessageList({ sessionId }: { sessionId: string }) {
 				computeItemKey={(_, message) => message.id}
 				itemContent={(_, message) => (
 					<div className={styles.item}>
-						<MessageItem message={message} streaming={busy && message.id === lastId} />
+						<MessageItem
+							message={message}
+							streaming={busy && message.id === lastId}
+							reverted={revertedIds?.has(message.id) ?? false}
+							actionsDisabled={actionsDisabled}
+							onFork={onFork}
+							onRevert={onRevert}
+						/>
 					</div>
 				)}
 				startReached={onStartReached}

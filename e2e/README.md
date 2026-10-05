@@ -14,6 +14,7 @@ uses Node 24's built-in `fetch` and `WebSocket`.
 | `lifecycle.test.mjs` | directory picker → create → rename → delete |
 | `bench.test.mjs` | first-render, SSE connect, session-switch, modal-open timings |
 | `model.test.mjs` | real streaming, error-state, permission + question prompts (slow) |
+| `fork.test.mjs` | fork a session from a message, revert + restore, revert dock (slow) |
 | `run.mjs` | orchestrator |
 
 ## Prerequisites
@@ -46,9 +47,10 @@ failure/verification runs) are written to `e2e/shots/` (git-ignored).
 
 ## Model-backed checks
 
-`model.test.mjs` drives a live model, so it is slow and only runs with
-`--with-model`. It creates and deletes its own scratch sessions. Configure the
-models via env:
+`model.test.mjs` and `fork.test.mjs` drive a live model, so they are slow and
+only run with `--with-model`. They create and delete their own scratch sessions.
+Configure the models via env (both suites share `E2E_MODEL_WORK`; `fork.test.mjs`
+defaults it to `opencode/big-pickle`):
 
 | Var | Default | Purpose |
 |---|---|---|

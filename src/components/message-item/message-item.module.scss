@@ -4,6 +4,11 @@
 	gap: 6px;
 }
 
+/* Messages at/after the revert point stay visible but read as "rolled back". */
+.reverted {
+	opacity: 0.45;
+}
+
 .role {
 	display: flex;
 	align-items: center;
@@ -14,6 +19,54 @@
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 	color: var(--text-faint);
+}
+
+/* Per-message fork/revert controls, revealed on hover (or focus) so the
+   transcript stays quiet; always visible where hover isn't available. */
+.actions {
+	margin-left: auto;
+	display: flex;
+	gap: 4px;
+	opacity: 0;
+	transition: opacity var(--transition-fast);
+}
+
+.msg:hover .actions,
+.msg:focus-within .actions {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.actions {
+		opacity: 1;
+	}
+}
+
+.action {
+	padding: 1px 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-full);
+	background: var(--bg-elevated);
+	color: var(--text-dim);
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: none;
+	letter-spacing: normal;
+	transition:
+		background var(--transition-fast),
+		border-color var(--transition-fast),
+		color var(--transition-fast);
+
+	&:hover:not(:disabled) {
+		background: var(--bg-hover);
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+
+	&:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
 }
 
 /* Pin the chip to the same 16px line box as the role label so it appearing
