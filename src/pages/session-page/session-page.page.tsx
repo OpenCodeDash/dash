@@ -79,7 +79,7 @@ export function SessionPage() {
 						<>
 							<PermissionPrompts sessionId={sessionId} />
 							<QuestionPrompts sessionId={sessionId} />
-							<PromptComposer sessionId={sessionId} busy={busy} />
+							<PromptComposer key={sessionId} sessionId={sessionId} busy={busy} />
 						</>
 					)}
 				</div>
