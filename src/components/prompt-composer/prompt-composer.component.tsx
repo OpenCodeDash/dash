@@ -11,6 +11,7 @@ import {
 	type Message,
 	type Part,
 } from "react-opencode";
+import { useMessageQueue, type QueuedMessage } from "../../hooks/use-message-queue.ts";
 import { compactSession } from "../../server.ts";
 import { Dropdown } from "../dropdown/dropdown.component.tsx";
 import styles from "./prompt-composer.module.scss";
@@ -94,6 +95,7 @@ export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: b
 	const agent = agentChoice ?? derived.agent;
 
 	const submitting = sending || busy;
+	const { queue, enqueue, remove } = useMessageQueue(busy, sendQueued);
 
 	// Slash menu: only while the user is still typing the command name (no
 	// whitespace yet). Once arguments start, the menu closes.
@@ -101,41 +103,90 @@ export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: b
 	const matches = useMemo(() => (query === null ? [] : filterCommands(query, commands)), [query, commands]);
 	const menuOpen = query !== null && !dismissed && matches.length > 0;
 	const active = matches.length ? Math.min(activeIndex, matches.length - 1) : 0;
+	// Slash commands are queue-only: steering literal `/compact` as text is wrong.
+	const pendingIsCommand = parseSlashCommand(text.trim()) !== null;
 
 	function complete(cmd: { name: string }) {
 		setText(`/${cmd.name} `);
 		setActiveIndex(0);
 	}
 
+	async function dispatch(raw: string, modelKey: string, agent: string): Promise<void> {
+		const parsed = parseSlashCommand(raw);
+		const compacting = parsed?.name === "compact";
+		const serverCommand = parsed && !compacting && commands.some((c) => c.name === parsed.name) ? parsed : null;
+		if (compacting) {
+			await compactSession(client.url, sessionId);
+			return;
+		}
+		if (serverCommand) {
+			await command(sessionId, {
+				command: serverCommand.name,
+				arguments: serverCommand.arguments,
+				agent: agent || undefined,
+				model: modelKey || undefined,
+			});
+			return;
+		}
+		const [providerID, ...rest] = modelKey.split("/");
+		await prompt({
+			parts: [{ type: "text", text: raw }],
+			model: modelKey ? { providerID, modelID: rest.join("/") } : undefined,
+			agent: agent || undefined,
+		});
+	}
+
+	// Flushing a queued message uses the same blocking send as a normal turn, so
+	// the queue's FIFO order is preserved by the hook.
+	async function sendQueued(message: QueuedMessage) {
+		setError(null);
+		try {
+			await dispatch(message.text, message.modelKey, message.agent);
+		} catch (e) {
+			setError(e instanceof Error ? e.message : String(e));
+			throw e;
+		}
+	}
+
+	// Queue the current input; it runs after the active turn finishes.
+	function queueMessage() {
+		const trimmed = text.trim();
+		if (!trimmed || !busy) return;
+		setError(null);
+		enqueue({ text: trimmed, modelKey, agent });
+		setText("");
+	}
+
+	// Steer the active turn now via the async endpoint. The running loop absorbs
+	// the message at its next safe boundary. Slash commands are queue-only.
+	async function steer() {
+		const trimmed = text.trim();
+		if (!trimmed || !busy || parseSlashCommand(trimmed)) return;
+		setError(null);
+		setText("");
+		try {
+			const [providerID, ...rest] = modelKey.split("/");
+			await client.promptAsync(sessionId, {
+				parts: [{ type: "text", text: trimmed }],
+				model: modelKey ? { providerID, modelID: rest.join("/") } : undefined,
+				agent: agent || undefined,
+			});
+		} catch (e) {
+			setError(e instanceof Error ? e.message : String(e));
+			setText((cur) => (cur ? cur : trimmed));
+		}
+	}
+
 	async function submit() {
 		const trimmed = text.trim();
 		if (!trimmed || submitting) return;
-		const parsed = parseSlashCommand(trimmed);
-		const compacting = parsed?.name === "compact";
-		const serverCommand = parsed && !compacting && commands.some((c) => c.name === parsed.name) ? parsed : null;
 		setError(null);
 		setSending(true);
 		// Clear optimistically: the sync prompt endpoint resolves only after the
 		// whole turn finishes, so waiting to clear leaves the text sitting there.
 		setText("");
 		try {
-			if (compacting) {
-				await compactSession(client.url, sessionId);
-			} else if (serverCommand) {
-				await command(sessionId, {
-					command: serverCommand.name,
-					arguments: serverCommand.arguments,
-					agent: agent || undefined,
-					model: modelKey || undefined,
-				});
-			} else {
-				const [providerID, ...rest] = modelKey.split("/");
-				await prompt({
-					parts: [{ type: "text", text: trimmed }],
-					model: modelKey ? { providerID, modelID: rest.join("/") } : undefined,
-					agent: agent || undefined,
-				});
-			}
+			await dispatch(trimmed, modelKey, agent);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : String(e));
 			// Restore the failed message unless the user already started typing.
@@ -148,11 +199,34 @@ export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: b
 	return (
 		<div className={styles.wrap}>
 			{error && <div className={styles.error}>{error}</div>}
+			{queue.length > 0 && (
+				<div className={styles.queue}>
+					<div className={styles.queueHeader}>Queued ({queue.length})</div>
+					{queue.map((message) => (
+						<div key={message.id} className={styles.queueItem}>
+							<span className={styles.queueText}>{message.text}</span>
+							<button
+								type="button"
+								className={styles.queueRemove}
+								title="Remove from queue"
+								aria-label="Remove queued message"
+								onClick={() => remove(message.id)}
+							>
+								✕
+							</button>
+						</div>
+					))}
+				</div>
+			)}
 			<div className={styles.composer}>
 				<textarea
 					ref={inputRef}
 					className={styles.input}
-					placeholder="Send a message… (Enter to send, Shift+Enter for a new line, / for commands)"
+					placeholder={
+						busy
+							? "Queue or steer a message… (Shift+Enter for a new line, / for commands)"
+							: "Send a message… (Enter to send, Shift+Enter for a new line, / for commands)"
+					}
 					value={text}
 					rows={3}
 					onChange={(e) => {
@@ -238,9 +312,29 @@ export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: b
 					/>
 					<span className="spacer" />
 					{busy ? (
-						<button type="button" className="btn btn-danger" onClick={() => void abort()}>
-							Stop
-						</button>
+						<>
+							<button
+								type="button"
+								className="btn"
+								disabled={!text.trim()}
+								onClick={queueMessage}
+								title="Run after the current turn finishes"
+							>
+								Queue
+							</button>
+							<button
+								type="button"
+								className="btn btn-primary"
+								disabled={!text.trim() || pendingIsCommand}
+								onClick={() => void steer()}
+								title={pendingIsCommand ? "Commands can only be queued" : "Send into the running turn now"}
+							>
+								Steer
+							</button>
+							<button type="button" className="btn btn-danger" onClick={() => void abort()}>
+								Stop
+							</button>
+						</>
 					) : (
 						<button
 							type="button"

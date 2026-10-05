@@ -18,6 +18,7 @@ import { run as runTasks } from "./tasks.test.mjs";
 import { run as runMobileSwipe } from "./mobile-swipe.test.mjs";
 import { run as runDropdown } from "./dropdown.test.mjs";
 import { run as runModel } from "./model.test.mjs";
+import { run as runQueue } from "./queue.test.mjs";
 
 const withModel = process.argv.includes("--with-model");
 
@@ -61,6 +62,7 @@ if (boardsOk) {
 }
 if (withModel) {
 	if (!(await runSuite("model", runModel))) failures.push("model");
+	if (!(await runSuite("queue", runQueue))) failures.push("queue");
 } else {
 	console.log("\n(skip model-backed checks — pass --with-model to include)");
 }
