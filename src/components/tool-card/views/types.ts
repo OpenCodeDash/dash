@@ -20,6 +20,18 @@ export function num(v: unknown): number | undefined {
 	return typeof v === "number" ? v : undefined;
 }
 
+/** Only http(s) URLs are safe to render as a clickable href. */
+export function httpUrl(v: unknown): string | undefined {
+	const value = str(v);
+	if (!value) return undefined;
+	try {
+		const { protocol } = new URL(value);
+		return protocol === "http:" || protocol === "https:" ? value : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 export function obj(v: unknown): Record<string, unknown> | undefined {
 	return typeof v === "object" && v !== null ? (v as Record<string, unknown>) : undefined;
 }
