@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { ToolPart } from "react-opencode";
+import { genericTitle } from "./views/types.ts";
+import { GenericBody } from "./views/shared.tsx";
+import { viewFor } from "./views/index.ts";
 import styles from "./tool-card.module.scss";
 
 const STATUS_ICON: Record<ToolPart["state"]["status"], string> = {
@@ -12,29 +15,19 @@ const STATUS_ICON: Record<ToolPart["state"]["status"], string> = {
 export function ToolCard({ part }: { part: ToolPart }) {
 	const [open, setOpen] = useState(false);
 	const state = part.state;
-	const title =
-		state.status === "completed"
-			? state.title
-			: state.status === "running"
-				? (state.title ?? "")
-				: "";
+	const view = viewFor(part.tool);
+	const summary: ReactNode = view?.summary?.(state) ?? genericTitle(state);
 
 	return (
 		<div className={styles.tool}>
 			<button type="button" className={styles.head} onClick={() => setOpen((o) => !o)}>
 				<span className={styles[`status_${state.status}`]}>{STATUS_ICON[state.status]}</span>
 				<span className={styles.name}>{part.tool}</span>
-				{title && <span className={styles.title}>{title}</span>}
+				{summary && <span className={styles.title}>{summary}</span>}
 				<span className={styles.chevron}>{open ? "−" : "+"}</span>
 			</button>
 			{open && (
-				<div className={styles.body}>
-					{state.input && <pre className={styles.pre}>{JSON.stringify(state.input, null, 2)}</pre>}
-					{state.status === "completed" && <pre className={styles.pre}>{state.output}</pre>}
-					{state.status === "error" && (
-						<pre className={`${styles.pre} ${styles.preError}`}>{state.error}</pre>
-					)}
-				</div>
+				<div className={styles.body}>{view ? view.body(part) : <GenericBody state={state} />}</div>
 			)}
 		</div>
 	);

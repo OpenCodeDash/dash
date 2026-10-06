@@ -84,3 +84,158 @@
 .preError {
 	color: var(--red);
 }
+
+.prompt {
+	color: var(--green);
+	user-select: none;
+}
+
+.metaRow {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.link {
+	color: var(--accent);
+	text-decoration: none;
+	font-size: 12.5px;
+	word-break: break-all;
+
+	&:hover {
+		text-decoration: underline;
+	}
+}
+
+/* read output: number gutter + code */
+.code {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.codeLine {
+	display: flex;
+	gap: 10px;
+}
+
+.lineNo {
+	flex: 0 0 auto;
+	min-width: 2.5ch;
+	text-align: right;
+	color: var(--text-faint);
+	user-select: none;
+}
+
+.lineText {
+	flex: 1;
+	min-width: 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+	tab-size: 4;
+	color: var(--text-dim);
+}
+
+/* webfetch: rendered markdown */
+.fetch {
+	font-size: 13px;
+
+	img {
+		max-width: 100%;
+	}
+
+	a {
+		color: var(--accent);
+	}
+}
+
+/* question tool */
+.questions {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.question {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.qText {
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.options {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.option {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 6px 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--bg-input);
+}
+
+.optionPicked {
+	border-color: var(--accent-line);
+	background: var(--accent-soft);
+}
+
+.optionLabel {
+	font-size: 12.5px;
+	color: var(--text);
+}
+
+.optionDesc {
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+/* todowrite tool */
+.todos {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.todo {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	font-size: 12.5px;
+}
+
+.todoIcon {
+	flex: 0 0 auto;
+	width: 14px;
+	text-align: center;
+}
+
+.todo_completed {
+	color: var(--green);
+}
+
+.todo_in_progress {
+	color: var(--accent);
+}
+
+.todo_pending {
+	color: var(--text-faint);
+}
+
+.todo_cancelled {
+	color: var(--red);
+}
+
+.todoText {
+	line-height: 1.4;
+	color: var(--text-dim);
+}

@@ -38,7 +38,7 @@ function normalizeDiff(raw: unknown): DiffFile[] {
 	return [];
 }
 
-function DiffText({ text }: { text: string }) {
+export function DiffText({ text }: { text: string }) {
 	return (
 		<pre className={styles.diff}>
 			{text.split("\n").map((line, i) => {
