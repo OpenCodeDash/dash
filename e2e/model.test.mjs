@@ -18,10 +18,10 @@ const AGENT = process.env.E2E_AGENT || "code-reviewer";
 // renders on a separate (async) React pass, so open and pick are two evals with
 // a short settle between them.
 async function pickOption(c, title, id) {
-	const opened = await c.eval(`(() => { const b=document.querySelector('button[title=' + JSON.stringify(title) + ']'); if(!b) return false; b.click(); return true; })()`);
+	const opened = await c.eval(`(() => { const b=document.querySelector(${JSON.stringify(`button[title="${title}"]`)}); if(!b) return false; b.click(); return true; })()`);
 	if (!opened) return false;
 	await sleep(150);
-	return await c.eval(`(() => { const o=document.querySelector('[data-value=' + JSON.stringify(id) + ']'); if(!o) return false; o.click(); return true; })()`);
+	return await c.eval(`(() => { const o=document.querySelector(${JSON.stringify(`[data-value="${id}"]`)}); if(!o) return false; o.click(); return true; })()`);
 }
 const sendPrompt = (text) => `(() => { const ta=document.querySelector('textarea'); const set=Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value').set; set.call(ta, ${JSON.stringify(text)}); ta.dispatchEvent(new Event('input',{bubbles:true})); ta.focus(); ta.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,which:13,bubbles:true})); return 'submitted' })()`;
 
@@ -37,8 +37,10 @@ async function streaming(c, s) {
 		await openSession(c, sid);
 		await pickOption(c, "Model", WORK);
 		// A long-enough response so token streaming spans multiple polls (a tiny
-		// reply can complete before the first sample, making "growth" unobservable).
-		await c.eval(sendPrompt("List the first 30 prime numbers, one per line. Start from 2."));
+		// reply can complete before the first sample, making "growth" unobservable)
+		// and so the transcript overflows the viewport, which is what makes the
+		// follow-scroll regression observable.
+		await c.eval(sendPrompt("List the first 60 prime numbers, one per line. Start from 2."));
 		// Regression for #30: the composer must clear on send, not after the
 		// (slow) synchronous prompt resolves.
 		await sleep(200);
@@ -48,14 +50,23 @@ async function streaming(c, s) {
 		// render on completion); the in-progress text lives in the `.msg` container
 		// that holds the streaming cursor. Measure that container's length to see
 		// real token growth across polls.
+		// Regression for #113: the view must stay pinned to the bottom while new
+		// thinking/messages stream in, not only once the response completes. Track
+		// the scroller's distance from the bottom; the buggy build drifts away as
+		// the transcript grows.
 		let sawBusy = false, sawCursor = false, grew = 0, prev = 0, sawIdle = false;
+		let sawOverflow = false, maxFromBottom = 0;
 		for (let i = 0; i < 80; i++) {
 			await sleep(500);
-			const st = await c.eval(`(() => { const cur=document.querySelector('[class*="cursor"]'); let el=cur; while(el && el!==document.body && (el.textContent||'').trim().length<3) el=el.parentElement; return { busy:!!document.querySelector('.btn-danger'), cursor:!!cur, len: el?(el.textContent||'').trim().length:0 } })()`);
+			const st = await c.eval(`(() => { const cur=document.querySelector('[class*="cursor"]'); let el=cur; while(el && el!==document.body && (el.textContent||'').trim().length<3) el=el.parentElement; const sc=document.querySelector('[data-virtuoso-scroller]'); return { busy:!!document.querySelector('.btn-danger'), cursor:!!cur, len: el?(el.textContent||'').trim().length:0, overflow: sc?sc.scrollHeight>sc.clientHeight+1:false, fromBottom: sc?sc.scrollHeight-sc.scrollTop-sc.clientHeight:0 } })()`);
 			if (st.busy) sawBusy = true;
 			if (st.cursor) sawCursor = true;
 			if (st.len > prev && prev > 0) grew++;
 			prev = st.len;
+			if (st.overflow) {
+				sawOverflow = true;
+				if (st.fromBottom > maxFromBottom) maxFromBottom = st.fromBottom;
+			}
 			if (!st.busy && i > 3) { sawIdle = true; break; }
 		}
 		const finalText = await c.eval(`(() => { const mds=[...document.querySelectorAll('.md')]; return mds.length?mds[mds.length-1].innerText.slice(0,120):'' })()`);
@@ -64,6 +75,11 @@ async function streaming(c, s) {
 		s.check("assistant output grew across polls", grew > 0, `growthSteps=${grew}`);
 		s.check("reached idle", sawIdle);
 		s.check("assistant produced non-empty text", (finalText || "").trim().length > 0, JSON.stringify(finalText));
+		s.check(
+			"transcript stayed pinned to the bottom while streaming",
+			sawOverflow && maxFromBottom <= 300,
+			`maxFromBottom=${maxFromBottom} overflow=${sawOverflow}`,
+		);
 	} finally {
 		await deleteSession(sid);
 	}
