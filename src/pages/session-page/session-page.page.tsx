@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
 	useFileStatus,
@@ -8,6 +8,8 @@ import {
 	useStore,
 	useTodos,
 	type Message,
+	type Part,
+	type TextPart,
 } from "react-opencode";
 import { useSessionTask } from "react-backdash";
 import { ConfirmDialog } from "../../components/confirm-dialog/confirm-dialog.component.tsx";
@@ -27,6 +29,16 @@ type Action = "fork" | "revert" | "restore";
 // Stable empty reference so the store selector doesn't churn on every render.
 const EMPTY_MESSAGES: Message[] = [];
 
+const isText = (part: Part): part is TextPart => part.type === "text";
+
+/** The plain text a message was composed of (user turns have just text parts). */
+const messageText = (parts: Part[] | undefined): string =>
+	(parts ?? [])
+		.filter(isText)
+		.map((part) => part.text)
+		.join("\n\n")
+		.trim();
+
 export function SessionPage() {
 	const { sessionId } = useParams<{ sessionId: string }>();
 	const navigate = useNavigate();
@@ -45,6 +57,9 @@ export function SessionPage() {
 	const [action, setAction] = useState<Action | null>(null);
 	const [actionError, setActionError] = useState<string | null>(null);
 	const [revertTarget, setRevertTarget] = useState<Message | null>(null);
+	// Seeds the composer with the reverted message's text so it can be re-sent.
+	const [prefill, setPrefill] = useState<{ text: string; id: number } | undefined>(undefined);
+	const prefillSeq = useRef(0);
 	const storeMessages = useStore((s) => (sessionId ? (s.messages[sessionId] ?? EMPTY_MESSAGES) : EMPTY_MESSAGES));
 
 	const isSubagent = Boolean(session?.parentID);
@@ -104,10 +119,14 @@ export function SessionPage() {
 		const target = revertTarget;
 		setRevertTarget(null);
 		if (!target || !sessionId || action) return;
+		const text = messageText(client.store.state.parts[target.id]);
 		setAction("revert");
 		setActionError(null);
 		revertSessionToMessage(client.url, sessionId, target.id, session?.directory)
-			.then((updated) => client.store.upsertSession(updated))
+			.then((updated) => {
+				client.store.upsertSession(updated);
+				if (text) setPrefill({ text, id: (prefillSeq.current += 1) });
+			})
 			.catch((e) => setActionError(e instanceof Error ? e.message : String(e)))
 			.finally(() => setAction(null));
 	}
@@ -185,7 +204,7 @@ export function SessionPage() {
 						<>
 							<PermissionPrompts sessionId={sessionId} />
 							<QuestionPrompts sessionId={sessionId} />
-							<PromptComposer key={sessionId} sessionId={sessionId} busy={busy} />
+							<PromptComposer key={sessionId} sessionId={sessionId} busy={busy} prefill={prefill} />
 						</>
 					)}
 				</div>

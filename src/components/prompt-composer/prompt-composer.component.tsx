@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	useAgents,
 	useClientActions,
@@ -42,7 +42,22 @@ function agentOf(message: Message, parts: Part[]): string | undefined {
 	return (message as MessageMeta).agent;
 }
 
-export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: boolean }) {
+interface Prefill {
+	/** Text to drop into the composer. */
+	text: string;
+	/** Bumped each time so repeated reverts to the same text still apply. */
+	id: number;
+}
+
+export function PromptComposer({
+	sessionId,
+	busy,
+	prefill,
+}: {
+	sessionId: string;
+	busy: boolean;
+	prefill?: Prefill;
+}) {
 	const { prompt, abort } = usePrompt(sessionId);
 	const client = useOpenCode();
 	const { command } = useClientActions();
@@ -59,6 +74,18 @@ export function PromptComposer({ sessionId, busy }: { sessionId: string; busy: b
 	// while the user keeps editing the same command.
 	const [dismissed, setDismissed] = useState(false);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
+	// Reverting to a message seeds the composer with that message's text so it can
+	// be edited and re-sent. The `id` guards against re-applying the same prefill.
+	const appliedPrefill = useRef<number | null>(null);
+
+	useEffect(() => {
+		if (!prefill || prefill.id === appliedPrefill.current) return;
+		appliedPrefill.current = prefill.id;
+		setText(prefill.text);
+		setDismissed(false);
+		setActiveIndex(0);
+		inputRef.current?.focus();
+	}, [prefill]);
 
 	const models = useMemo(() => {
 		const list: { key: string; label: string }[] = [];

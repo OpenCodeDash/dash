@@ -94,6 +94,12 @@ export async function run() {
 		s.check("revert dock summarizes rolled-back messages", /2 rolled back messages/.test(dock), JSON.stringify(dock));
 		const dimmed = await c.eval(`document.querySelectorAll('[class*="reverted"]').length`);
 		s.check("rolled-back messages are dimmed", dimmed === 2, `dimmed=${dimmed}`);
+		const composerText = await c.eval(`document.querySelector('textarea')?.value ?? null`);
+		s.check(
+			"revert prefills the composer with the reverted message text",
+			composerText === "Reply with exactly one word: banana",
+			JSON.stringify(composerText),
+		);
 
 		// Revert must survive a reload (it is persisted on the session).
 		await openSession(c, sid);
