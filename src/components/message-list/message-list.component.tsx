@@ -12,8 +12,8 @@ const START_INDEX = 100000;
 // Within this many pixels of the bottom the list is considered "following"
 // again, so a user who scrolls back down re-pins to the newest content.
 const BOTTOM_THRESHOLD = 24;
-// An upward movement larger than this is a deliberate user scroll, not layout
-// jitter from streamed content resizing the transcript.
+// Upward movement from the last bottom position larger than this is a deliberate
+// user scroll, not layout jitter from streamed content resizing the transcript.
 const USER_SCROLL_DELTA = 24;
 
 interface MessageListProps {
@@ -43,7 +43,11 @@ export function MessageList({
 	// first token arrived.
 	const stick = useRef(true);
 	const scroller = useRef<HTMLElement | null>(null);
-	const lastScrollTop = useRef(0);
+	// scrollTop at which the list was last pinned to the bottom. Comparing each
+	// scroll event to this anchor (not to the previous event) means a slow
+	// trackpad/touch scroll accumulates and still clears `stick`, while streamed
+	// content growth — which leaves scrollTop untouched — never does.
+	const bottomAnchor = useRef(0);
 	const loadingOlder = useRef(false);
 	const [firstItemIndex, setFirstItemIndex] = useState(START_INDEX);
 
@@ -70,10 +74,10 @@ export function MessageList({
 		const fromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
 		if (fromBottom <= BOTTOM_THRESHOLD) {
 			stick.current = true;
-		} else if (el.scrollTop < lastScrollTop.current - USER_SCROLL_DELTA) {
+			bottomAnchor.current = el.scrollTop;
+		} else if (el.scrollTop < bottomAnchor.current - USER_SCROLL_DELTA) {
 			stick.current = false;
 		}
-		lastScrollTop.current = el.scrollTop;
 	}, []);
 
 	// react-virtuoso owns the scroll element; watch it directly so user intent is
@@ -85,7 +89,7 @@ export function MessageList({
 			scroller.current?.removeEventListener("scroll", onScroll);
 			scroller.current = ref instanceof HTMLElement ? ref : null;
 			if (scroller.current) {
-				lastScrollTop.current = scroller.current.scrollTop;
+				bottomAnchor.current = scroller.current.scrollTop;
 				scroller.current.addEventListener("scroll", onScroll, { passive: true });
 			}
 		},
