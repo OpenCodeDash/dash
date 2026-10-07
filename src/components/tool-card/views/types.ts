@@ -20,6 +20,10 @@ export function num(v: unknown): number | undefined {
 	return typeof v === "number" ? v : undefined;
 }
 
+export function idStr(v: unknown): string | undefined {
+	return typeof v === "number" || typeof v === "string" ? String(v) : undefined;
+}
+
 /** Only http(s) URLs are safe to render as a clickable href. */
 export function httpUrl(v: unknown): string | undefined {
 	const value = str(v);
@@ -55,4 +59,10 @@ export function genericTitle(state: ToolState): string {
 	if (state.status === "completed") return state.title;
 	if (state.status === "running") return state.title ?? "";
 	return "";
+}
+
+export function todoProgress(v: unknown): { done: number; total: number } | undefined {
+	if (!Array.isArray(v) || v.length === 0) return undefined;
+	const done = v.filter((t) => obj(t)?.status === "completed").length;
+	return { done, total: v.length };
 }

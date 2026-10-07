@@ -1,5 +1,27 @@
-import type { ToolState } from "react-opencode";
+import type { Todo, ToolState } from "react-opencode";
 import styles from "../tool-card.module.scss";
+
+const TODO_ICON: Record<Todo["status"], string> = {
+	pending: "○",
+	in_progress: "●",
+	completed: "✓",
+	cancelled: "✕",
+};
+
+export function TodoList({ todos }: { todos: Todo[] }) {
+	return (
+		<div className={styles.todos}>
+			{todos.map((todo, i) => (
+				<div key={i} className={styles.todo}>
+					<span className={`${styles.todoIcon} ${styles[`todo_${todo.status}`]}`}>
+						{TODO_ICON[todo.status] ?? "○"}
+					</span>
+					<span className={styles.todoText}>{todo.content}</span>
+				</div>
+			))}
+		</div>
+	);
+}
 
 export function Output({ state, className }: { state: ToolState; className?: string }) {
 	if (state.status === "completed") {
