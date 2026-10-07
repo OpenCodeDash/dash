@@ -239,3 +239,163 @@
 	line-height: 1.4;
 	color: var(--text-dim);
 }
+
+/* kanban: board list / board view / tags / field rows */
+.boardList {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.boardRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.boardName {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text);
+}
+
+.board {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.boardHead {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.columns {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.column {
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--bg-input);
+	padding: 6px 8px;
+}
+
+.columnHead {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 4px;
+}
+
+.columnName {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--text);
+}
+
+.columnCount {
+	margin-left: auto;
+	font-size: 11px;
+	color: var(--text-faint);
+}
+
+.task {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 2px 0 2px 8px;
+}
+
+.taskId {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--text-faint);
+}
+
+.taskName {
+	font-size: 12.5px;
+	color: var(--text-dim);
+}
+
+.tagList {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.tagRow {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.tagHead {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.swatch {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	border-radius: 3px;
+	border: 1px solid var(--border-strong);
+	flex: 0 0 auto;
+}
+
+.tagName {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text);
+}
+
+.tagColor {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--text-faint);
+}
+
+.tagDesc {
+	font-size: 12.5px;
+	color: var(--text-dim);
+}
+
+.tagPrompt {
+	font-size: 12px;
+	color: var(--text-faint);
+	white-space: pre-wrap;
+	border-left: 2px solid var(--border-strong);
+	padding-left: 8px;
+}
+
+.fields {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.field {
+	display: flex;
+	gap: 10px;
+	font-size: 12.5px;
+}
+
+.fieldLabel {
+	flex: 0 0 90px;
+	color: var(--text-faint);
+}
+
+.fieldValue {
+	flex: 1;
+	min-width: 0;
+	color: var(--text-dim);
+	white-space: pre-wrap;
+	word-break: break-word;
+}
