@@ -12,9 +12,8 @@ const START_INDEX = 100000;
 // Within this many pixels of the bottom the list is considered "following"
 // again, so a user who scrolls back down re-pins to the newest content.
 const BOTTOM_THRESHOLD = 24;
-// Upward movement from the last bottom position larger than this is a deliberate
-// user scroll, not layout jitter from streamed content resizing the transcript.
-const USER_SCROLL_DELTA = 24;
+// Ignore sub-pixel/measurement noise when reading scroll direction.
+const SCROLL_EPSILON = 2;
 
 interface MessageListProps {
 	sessionId: string;
@@ -43,11 +42,13 @@ export function MessageList({
 	// first token arrived.
 	const stick = useRef(true);
 	const scroller = useRef<HTMLElement | null>(null);
-	// scrollTop at which the list was last pinned to the bottom. Comparing each
-	// scroll event to this anchor (not to the previous event) means a slow
-	// trackpad/touch scroll accumulates and still clears `stick`, while streamed
-	// content growth — which leaves scrollTop untouched — never does.
-	const bottomAnchor = useRef(0);
+	// Last scroll position/size, to tell a user scroll from react-virtuoso
+	// repositioning itself. `top` decreasing means the user scrolled up (streamed
+	// content growth leaves it untouched); `height` shrinking is a measurement
+	// reflow (e.g. the streaming preview collapsing into final markdown) and is
+	// never user intent, so it must not stop following.
+	const lastTop = useRef(0);
+	const lastHeight = useRef(0);
 	const loadingOlder = useRef(false);
 	const [firstItemIndex, setFirstItemIndex] = useState(START_INDEX);
 
@@ -71,11 +72,26 @@ export function MessageList({
 	const onScroll = useCallback(() => {
 		const el = scroller.current;
 		if (!el) return;
-		const fromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+		const top = el.scrollTop;
+		const height = el.scrollHeight;
+		const prevTop = lastTop.current;
+		const prevHeight = lastHeight.current;
+		lastTop.current = top;
+		lastHeight.current = height;
+
+		const fromBottom = height - top - el.clientHeight;
+		const movedUp = top < prevTop - SCROLL_EPSILON;
+		const shrank = height < prevHeight - SCROLL_EPSILON;
+
 		if (fromBottom <= BOTTOM_THRESHOLD) {
-			stick.current = true;
-			bottomAnchor.current = el.scrollTop;
-		} else if (el.scrollTop < bottomAnchor.current - USER_SCROLL_DELTA) {
+			// Back at the newest content: follow again, unless the user is actively
+			// scrolling up through this band — a small upward nudge must detach the
+			// view rather than get snapped back to the bottom.
+			stick.current = !movedUp;
+		} else if (movedUp && !shrank) {
+			// A deliberate upward move. A shrinking transcript (streaming preview
+			// collapsing to final markdown) moves the position too but is not user
+			// intent, so `shrank` keeps following through it.
 			stick.current = false;
 		}
 	}, []);
@@ -89,7 +105,8 @@ export function MessageList({
 			scroller.current?.removeEventListener("scroll", onScroll);
 			scroller.current = ref instanceof HTMLElement ? ref : null;
 			if (scroller.current) {
-				bottomAnchor.current = scroller.current.scrollTop;
+				lastTop.current = scroller.current.scrollTop;
+				lastHeight.current = scroller.current.scrollHeight;
 				scroller.current.addEventListener("scroll", onScroll, { passive: true });
 			}
 		},

@@ -132,3 +132,10 @@ export async function waitFor(c, sel, timeout = 5000) {
 }
 
 export function results(name) { console.log(`\n=== ${name} ===`); }
+
+// Dispatch a real wheel event at (x, y). Negative deltaY scrolls up. This is a
+// genuine user gesture, so scroll listeners that distinguish user scrolling from
+// react-virtuoso's own repositioning see it as intent.
+export function wheel(c, x, y, deltaY) {
+	return c.send("Input.dispatchMouseEvent", { type: "mouseWheel", x, y, deltaX: 0, deltaY });
+}

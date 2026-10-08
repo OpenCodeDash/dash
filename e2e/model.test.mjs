@@ -6,7 +6,7 @@
 //   E2E_MODEL_WORK  working model id   (default local-big/qwen3.8-27b)
 //   E2E_MODEL_DOWN  unreachable model  (default local-small/gpt-oss-20b)
 //   E2E_AGENT       agent that triggers a bash permission (default code-reviewer)
-import { newPage, sleep, results } from "./cdp.mjs";
+import { newPage, sleep, results, wheel } from "./cdp.mjs";
 import { Suite, APP_URL, newScratchSession, deleteSession } from "./lib.mjs";
 
 const WORK = process.env.E2E_MODEL_WORK || "local-big/qwen3.8-27b";
@@ -80,6 +80,65 @@ async function streaming(c, s) {
 			sawOverflow && maxFromBottom <= 300,
 			`maxFromBottom=${maxFromBottom} overflow=${sawOverflow}`,
 		);
+	} finally {
+		await deleteSession(sid);
+	}
+}
+
+// Regression for #155: while a response streams, an upward scroll must detach the
+// view and keep it where the user left it — the growing transcript must not drag
+// it back to the bottom. The small nudge (within the near-bottom band) is the case
+// that regressed: the old code treated "within N px of the bottom" as following
+// and snapped back on the next token.
+async function scrollDetach(c, s) {
+	results("model: scroll-up detaches while streaming (#155)");
+	const sid = (await newScratchSession("e2e scroll detach")).id;
+	try {
+		await openSession(c, sid);
+		await pickOption(c, "Model", WORK);
+		await c.eval(
+			sendPrompt(
+				"List the first 150 prime numbers, one per line, then explain the gap between each consecutive pair in one short sentence.",
+			),
+		);
+		const state = `(() => { const sc=document.querySelector('[data-virtuoso-scroller]'); return { busy:!!document.querySelector('.btn-danger'), overflow: sc?sc.scrollHeight>sc.clientHeight+1:false, fromBottom: sc?Math.round(sc.scrollHeight-sc.scrollTop-sc.clientHeight):0 } })()`;
+		// Wait until the transcript overflows and is actively streaming.
+		let overflowing = false;
+		for (let i = 0; i < 120 && !overflowing; i++) {
+			await sleep(500);
+			const st = await c.eval(state);
+			overflowing = st.overflow && st.busy;
+		}
+		if (!overflowing) {
+			s.check("transcript overflowed while streaming", false);
+			return;
+		}
+		// Let a little more content stream so the transcript is genuinely growing.
+		await sleep(1500);
+		const pt = await c.eval(
+			`(() => { const sc=document.querySelector('[data-virtuoso-scroller]'); if(!sc) return null; const r=sc.getBoundingClientRect(); return { x:Math.round(r.x+r.width/2), y:Math.round(r.y+r.height/2) }; })()`,
+		);
+		if (!pt) {
+			s.check("scroll container present", false);
+			return;
+		}
+		// A small upward nudge: three notches of 8px (24px total) — the gradual
+		// trackpad/touch gesture that used to be snapped back to the bottom.
+		for (let i = 0; i < 3; i++) {
+			await wheel(c, pt.x, pt.y, -8);
+			await sleep(60);
+		}
+		// Keep sampling while the response continues; the view must stay detached.
+		let minFromBottom = Infinity;
+		let sawBusy = false;
+		for (let i = 0; i < 8; i++) {
+			await sleep(500);
+			const st = await c.eval(state);
+			if (st.busy) sawBusy = true;
+			if (st.fromBottom < minFromBottom) minFromBottom = st.fromBottom;
+		}
+		s.check("transcript was streaming during the scroll", sawBusy);
+		s.check("scroll-up stayed detached from the bottom", minFromBottom > 30, `minFromBottom=${minFromBottom}`);
 	} finally {
 		await deleteSession(sid);
 	}
@@ -177,6 +236,7 @@ export async function run() {
 	const c = await newPage("about:blank");
 	try {
 		await streaming(c, s);
+		await scrollDetach(c, s);
 		await errorState(c, s);
 		await permission(c, s);
 		await question(c, s);
