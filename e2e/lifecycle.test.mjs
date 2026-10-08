@@ -98,7 +98,7 @@ export async function run() {
 	results("C. Delete");
 	const del = await c.eval(`(function(){
 	  const h=[...document.querySelectorAll('aside button')].find(b=>/▸|▾/.test(b.textContent)&&(b.textContent||'').includes(${JSON.stringify(groupKey)}));
-	  const item=h?.parentElement.querySelector('span[title="Double-click to rename"]')?.parentElement;
+	  const item=h?.parentElement.querySelector('[data-session-id]');
 	  const btn=item?.querySelector('button[title="Delete session"]'); if(!btn) return {ok:false}; btn.click(); return {ok:true};
 	})()`);
 	await sleep(400);
