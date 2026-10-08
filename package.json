@@ -17,7 +17,7 @@
 		"react-backdash": "github:eyezahhhh/react-backdash#297d5ee3977b89ee72bbf287ce6c1dc499477acf",
 		"react-dom": "^19.2.8",
 		"react-markdown": "^10.1.0",
-		"react-opencode": "github:eyezahhhh/react-opencode#7c8bbde11f09a9dc6c837d2c8bd797c2bda91e39",
+		"react-opencode": "github:eyezahhhh/react-opencode#5056da2cd1846df30c534e32ad88b40a8d03d8cc",
 		"react-router-dom": "^7.18.4",
 		"react-virtuoso": "^4.18.16",
 		"remark-breaks": "^4.0.0",
