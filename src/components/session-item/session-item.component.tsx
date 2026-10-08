@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useClientActions, useSessionBusy, type Session } from "react-opencode";
 import { ConfirmDialog } from "../confirm-dialog/confirm-dialog.component.tsx";
 import styles from "./session-item.module.scss";
@@ -36,44 +36,55 @@ export function SessionItem({ session, nested = false }: { session: Session; nes
 			.catch(() => undefined);
 	}
 
+	const leading = (
+		<>
+			{busy && <span className={styles.busy} title="Busy" />}
+			{nested && !renaming && (
+				<span className={styles.branch} title="Subagent" aria-hidden="true">
+					↳
+				</span>
+			)}
+		</>
+	);
+
 	return (
 		<>
 			<div
 				className={`${styles.item} ${active ? styles.active : ""} ${nested ? styles.nested : ""}`}
-				onClick={() => navigate(`/session/${session.id}`)}
+				data-session-id={session.id}
 			>
-				{busy && <span className={styles.busy} title="Busy" />}
-				{nested && !renaming && (
-					<span className={styles.branch} title="Subagent">
-						↳
-					</span>
-				)}
 				{renaming ? (
-					<input
-						className={styles.rename}
-						value={title}
-						autoFocus
-						onClick={(e) => e.stopPropagation()}
-						onChange={(e) => setTitle(e.target.value)}
-						onBlur={commitRename}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") commitRename();
-							if (e.key === "Escape") setRenaming(false);
-						}}
-					/>
-				) : (
-					<span className={styles.title} onDoubleClick={startRename} title="Double-click to rename">
-						{session.title ?? "New session"}
+					<span className={styles.main}>
+						{leading}
+						<input
+							className={styles.rename}
+							value={title}
+							autoFocus
+							onChange={(e) => setTitle(e.target.value)}
+							onBlur={commitRename}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") commitRename();
+								if (e.key === "Escape") setRenaming(false);
+							}}
+						/>
 					</span>
+				) : (
+					<Link to={`/session/${session.id}`} className={styles.main}>
+						{leading}
+						<span
+							className={styles.title}
+							onDoubleClick={startRename}
+							title="Double-click to rename"
+						>
+							{session.title ?? "New session"}
+						</span>
+					</Link>
 				)}
 				<button
 					type="button"
 					className="icon-btn"
 					title="Delete session"
-					onClick={(e) => {
-						e.stopPropagation();
-						setConfirming(true);
-					}}
+					onClick={() => setConfirming(true)}
 				>
 					✕
 				</button>

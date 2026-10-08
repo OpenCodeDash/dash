@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useClientActions, type BoardSummary } from "react-backdash";
 import { ConfirmDialog } from "../confirm-dialog/confirm-dialog.component.tsx";
 import styles from "./board-item.module.scss";
@@ -38,36 +38,37 @@ export function BoardItem({ board }: { board: BoardSummary }) {
 
 	return (
 		<>
-			<div
-				className={`${styles.item} ${active ? styles.active : ""}`}
-				onClick={() => navigate(`/boards/${board.id}`)}
-			>
+			<div className={`${styles.item} ${active ? styles.active : ""}`} data-board-id={board.id}>
 				{renaming ? (
-					<input
-						className={styles.rename}
-						value={title}
-						autoFocus
-						onClick={(e) => e.stopPropagation()}
-						onChange={(e) => setTitle(e.target.value)}
-						onBlur={commitRename}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") commitRename();
-							if (e.key === "Escape") setRenaming(false);
-						}}
-					/>
-				) : (
-					<span className={styles.title} onDoubleClick={startRename} title="Double-click to rename">
-						{board.name}
+					<span className={styles.main}>
+						<input
+							className={styles.rename}
+							value={title}
+							autoFocus
+							onChange={(e) => setTitle(e.target.value)}
+							onBlur={commitRename}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") commitRename();
+								if (e.key === "Escape") setRenaming(false);
+							}}
+						/>
 					</span>
+				) : (
+					<Link to={`/boards/${board.id}`} className={styles.main}>
+						<span
+							className={styles.title}
+							onDoubleClick={startRename}
+							title="Double-click to rename"
+						>
+							{board.name}
+						</span>
+					</Link>
 				)}
 				<button
 					type="button"
 					className="icon-btn"
 					title="Delete board"
-					onClick={(e) => {
-						e.stopPropagation();
-						setConfirming(true);
-					}}
+					onClick={() => setConfirming(true)}
 				>
 					✕
 				</button>

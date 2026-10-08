@@ -69,6 +69,23 @@ export async function run(suitesOut) {
 	await c.eval(asideBtnByPredicate(`(b)=>/▸|▾/.test(b.textContent)`)); // re-expand
 	await sleep(200);
 
+	// 3b. Sidebar session rows are real links, so middle-click / open-in-new-tab
+	// work natively (#119); the delete control must not be nested inside the link.
+	results("3b. Sidebar session links (#119)");
+	const sessionLinks = await c.eval(`(function(){
+  const nav=document.querySelector('nav'); if(!nav) return null;
+  const titles=[...nav.querySelectorAll('span[title="Double-click to rename"]')];
+  const hrefs=titles.map(t=>{ const a=t.closest('a'); return a ? a.getAttribute('href') : null; });
+  const deleteInAnchor=[...nav.querySelectorAll('button')].filter(b=>(b.textContent||'').trim()==='✕' && b.closest('a')).length;
+  return { titles:titles.length, links:hrefs.filter(h=>/^\\/session\\//.test(h||'')).length, deleteInAnchor };
+})()`);
+	s.check(
+		"session rows are links to /session/<id>",
+		sessionLinks && sessionLinks.titles > 0 && sessionLinks.links === sessionLinks.titles,
+		JSON.stringify(sessionLinks),
+	);
+	s.check("delete button not nested in the session link", sessionLinks && sessionLinks.deleteInAnchor === 0, JSON.stringify(sessionLinks));
+
 	// 4-6. Content-dependent (only meaningful if a rich session exists)
 	if (rich) {
 		await c.send("Page.navigate", { url: `${APP_URL}/session/${rich.id}` });
