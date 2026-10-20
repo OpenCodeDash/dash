@@ -31,6 +31,33 @@ export interface ResearchCampaignStatus {
 export interface ResearchCampaignDetail {
 	campaign: ResearchCampaignStatus;
 	brief: string;
+	criteria?: ResearchCriterion[];
+	warnings?: string[];
+}
+
+export type ResearchCriterionSource =
+	| { type: "field"; field: string }
+	| { type: "text"; prompt: string }
+	| { type: "image"; prompt: string; options?: string[] }
+	| { type: "derived"; evaluator: string; params?: Record<string, unknown> };
+
+export interface ResearchCriterion {
+	key: string;
+	label: string;
+	weight: number;
+	kind: "boolean" | "number" | "enum";
+	normalizer: Record<string, unknown>;
+	source: ResearchCriterionSource;
+	origin: "explicit" | "suggested";
+	hard?: Record<string, unknown>;
+	rationale?: string;
+}
+
+export interface ResearchPreview {
+	brief: Record<string, unknown>;
+	criteria: ResearchCriterion[];
+	echo: string;
+	warnings: string[];
 }
 
 export interface ResearchCriterionBreakdown {
@@ -42,6 +69,8 @@ export interface ResearchCriterionBreakdown {
 	normalized: number | null;
 	contribution: number;
 	policy: string;
+	origin?: "explicit" | "suggested";
+	sourceType?: string;
 	reason?: string;
 }
 
@@ -124,11 +153,21 @@ export function listCampaigns(): Promise<{ campaigns: ResearchCampaignStatus[] }
 
 export function createCampaign(input: {
 	prompt?: string;
-	brief?: string;
+	brief?: string | Record<string, unknown>;
 	pack?: string;
 	name?: string;
 }): Promise<{ campaign: ResearchCampaignStatus }> {
 	return request("/research/campaigns", {
+		method: "POST",
+		body: JSON.stringify(input),
+	});
+}
+
+export function previewCampaign(input: {
+	prompt: string;
+	pack?: string;
+}): Promise<ResearchPreview> {
+	return request("/research/campaigns/preview", {
 		method: "POST",
 		body: JSON.stringify(input),
 	});
