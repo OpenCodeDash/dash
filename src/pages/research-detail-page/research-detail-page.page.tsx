@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Modal } from "../../components/modal/modal.component.tsx";
 import {
@@ -17,6 +17,13 @@ import {
 import styles from "./research-detail-page.module.scss";
 
 const STAGES = ["discover", "collect", "vision", "score", "export"] as const;
+
+interface ActivityItem {
+	at: string;
+	type: string;
+	level: "info" | "error";
+	message: string;
+}
 
 function errText(error: unknown): string {
 	return error instanceof Error ? error.message : "Something went wrong";
@@ -166,6 +173,8 @@ export function ResearchDetailPage() {
 	const [feedback, setFeedback] = useState("");
 	const [feedbackResult, setFeedbackResult] = useState<string | null>(null);
 	const [selected, setSelected] = useState<ResearchRow | null>(null);
+	const [activity, setActivity] = useState<ActivityItem[]>([]);
+	const refreshTimer = useRef<number | null>(null);
 
 	const refresh = useCallback(async () => {
 		if (!id) return;
@@ -181,6 +190,23 @@ export function ResearchDetailPage() {
 			setError(errText(err));
 		}
 	}, [id]);
+
+	const scheduleRefresh = useCallback(() => {
+		if (refreshTimer.current !== null) return;
+		refreshTimer.current = window.setTimeout(() => {
+			refreshTimer.current = null;
+			void refresh();
+		}, 500);
+	}, [refresh]);
+
+	useEffect(
+		() => () => {
+			if (refreshTimer.current !== null) {
+				window.clearTimeout(refreshTimer.current);
+			}
+		},
+		[],
+	);
 
 	useEffect(() => {
 		if (!id) return;
@@ -208,16 +234,72 @@ export function ResearchDetailPage() {
 		return subscribeEvents(
 			id,
 			(event) => {
-				if (event.type === "stage" && typeof event.stage === "string") {
-					setStage(event.stage);
+				const at =
+					typeof event.at === "string" ? event.at : new Date().toISOString();
+				const append = (item: Omit<ActivityItem, "at">) =>
+					setActivity((previous) =>
+						[...previous, { at, ...item }].slice(-200),
+					);
+
+				if (event.type === "progress") {
+					const name = typeof event.stage === "string" ? event.stage : "run";
+					if (name === "discover" || name === "collect" || name === "vision") {
+						setStage(name);
+					}
+					append({
+						type: name,
+						level: "info",
+						message:
+							typeof event.message === "string"
+								? event.message
+								: `${String(event.current ?? "?")}/${String(event.total ?? "?")}`,
+					});
+				} else if (event.type === "log") {
+					append({
+						type: "log",
+						level: event.level === "error" ? "error" : "info",
+						message: String(event.message ?? ""),
+					});
+				} else if (event.type === "stage") {
+					if (typeof event.stage === "string") setStage(event.stage);
+					append({
+						type: "stage",
+						level: "info",
+						message: `→ ${String(event.stage)}`,
+					});
+				} else if (event.type === "run.started") {
+					setStage("discover");
+					append({ type: "run", level: "info", message: "started" });
+				} else if (event.type === "run.finished") {
+					setStage("export");
+					append({
+						type: "run",
+						level: "info",
+						message: `finished: ${String(event.stopReason ?? "done")}`,
+					});
+					void refresh();
+				} else if (event.type === "error") {
+					append({
+						type: "error",
+						level: "error",
+						message: String(event.message ?? "error"),
+					});
+				} else if (event.type === "status") {
+					const campaign = event.campaign as
+						| { status?: string }
+						| undefined;
+					append({
+						type: "status",
+						level: "info",
+						message: `connected · ${campaign?.status ?? "unknown"}`,
+					});
 				}
-				if (event.type === "run.started") setStage("discover");
-				if (event.type === "run.finished") setStage("export");
-				void refresh();
+
+				scheduleRefresh();
 			},
 			(err) => setError(err.message),
 		);
-	}, [id, refresh]);
+	}, [id, refresh, scheduleRefresh]);
 
 	const running = detail?.campaign.running ?? false;
 	useEffect(() => {
@@ -395,6 +477,56 @@ export function ResearchDetailPage() {
 				</div>
 
 				{error && <div className={styles.error}>{error}</div>}
+
+				<section className={styles.activity}>
+					<div className={styles.activityHead}>
+						<h2>Activity</h2>
+						<div className={styles.activityActions}>
+							<span className={styles.hint}>{activity.length} events</span>
+							<button
+								type="button"
+								className="btn btn-ghost"
+								onClick={() => setActivity([])}
+							>
+								Clear
+							</button>
+						</div>
+					</div>
+					{activity.length === 0 ? (
+						<div className={styles.empty}>Waiting for events…</div>
+					) : (
+						<ol className={styles.log}>
+							{activity
+								.slice()
+								.reverse()
+								.map((item, index) => (
+									<li
+										key={`${item.at}-${index}`}
+										className={
+											item.level === "error" ? styles.logError : styles.logLine
+										}
+									>
+										<span className={styles.logTime}>
+											{new Date(item.at).toLocaleTimeString()}
+										</span>
+										<span className={styles.logType}>{item.type}</span>
+										<span className={styles.logMessage}>{item.message}</span>
+									</li>
+								))}
+						</ol>
+					)}
+				</section>
+
+				{summary && summary.errors.length > 0 && (
+					<details className={styles.runErrors}>
+						<summary>{summary.errors.length} run error(s)</summary>
+						<ul>
+							{summary.errors.slice(0, 30).map((message, index) => (
+								<li key={index}>{message}</li>
+							))}
+						</ul>
+					</details>
+				)}
 
 				<section className={styles.feedback}>
 					<h2>Steer it</h2>
