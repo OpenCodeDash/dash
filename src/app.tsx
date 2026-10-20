@@ -15,6 +15,8 @@ import { useEdgeSwipe } from "./hooks/use-edge-swipe.ts";
 import { BoardPage } from "./pages/board-page/board-page.page.tsx";
 import { BoardsPage } from "./pages/boards-page/boards-page.page.tsx";
 import { HomePage } from "./pages/home-page/home-page.page.tsx";
+import { ResearchDetailPage } from "./pages/research-detail-page/research-detail-page.page.tsx";
+import { ResearchPage } from "./pages/research-page/research-page.page.tsx";
 import { SessionPage } from "./pages/session-page/session-page.page.tsx";
 import { SettingsPage } from "./pages/settings-page/settings-page.page.tsx";
 
@@ -88,6 +90,8 @@ export default function App() {
 							<Route path="session/:sessionId" element={<SessionPage />} />
 							<Route path="boards" element={<BoardsPage />} />
 							<Route path="boards/:boardId" element={<BoardPage />} />
+							<Route path="research" element={<ResearchPage />} />
+							<Route path="research/:id" element={<ResearchDetailPage />} />
 							<Route path="settings" element={<SettingsPage token={token} />} />
 							<Route path="*" element={<Navigate to="/" replace />} />
 						</Routes>

@@ -123,6 +123,17 @@ export function Sidebar({ open, onNewSession, onShowServer, onSignOut }: Sidebar
 				))}
 				{boards.length === 0 && <div className={styles.empty}>No boards yet</div>}
 			</div>
+			<div className={styles.boardsHeader}>
+				<span className={styles.title}>Research</span>
+				<button
+					type="button"
+					className="btn btn-ghost"
+					title="Open research"
+					onClick={() => navigate("/research")}
+				>
+					Open
+				</button>
+			</div>
 			<div className={styles.footer}>
 				<div className={styles.footerRow}>
 					<button type="button" className={styles.footerBtn} onClick={onShowServer}>
