@@ -87,6 +87,16 @@ export async function run() {
 		results("5. Sidebar");
 		await c.send("Page.navigate", { url: APP_URL + "/" });
 		s.check("sidebar lists board", await waitEval(c, `document.querySelector("aside")?.textContent?.includes(${JSON.stringify(BOARD)})`, 6000));
+		// The board row is a real link (middle-click / open-in-new-tab, #119); its
+		// delete control must be a sibling, not nested inside the anchor.
+		const boardLink = await c.eval(`(function(){
+  const links=[...document.querySelectorAll('a')].filter(a=>/^\\/boards\\//.test(a.getAttribute('href')||''));
+  const match=links.find(a=>(a.textContent||'').includes(${JSON.stringify(BOARD)}));
+  const deleteInAnchor=[...document.querySelectorAll('button')].filter(b=>(b.textContent||'').trim()==='✕' && b.closest('a')).length;
+  return { total:links.length, matched:!!match, href:match ? match.getAttribute('href') : null, deleteInAnchor };
+})()`);
+		s.check("board row is a link to /boards/<id>", boardLink.matched && !!boardLink.href, JSON.stringify(boardLink));
+		s.check("no delete button nested in a board link", boardLink.deleteInAnchor === 0, JSON.stringify(boardLink));
 
 		// 6. Rename a column via double-click
 		results("6. Rename column");
