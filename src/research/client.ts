@@ -10,7 +10,6 @@ export interface ResearchSummary {
 	shortlisted: number;
 	withGaps: number;
 	spendUsd: number;
-	export: string;
 	errors: string[];
 }
 
