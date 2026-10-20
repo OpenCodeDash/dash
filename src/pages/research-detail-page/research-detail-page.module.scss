@@ -369,3 +369,94 @@
 	color: var(--text-dim);
 	font-size: var(--text-sm);
 }
+
+.activity {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 14px 16px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	background: var(--bg-panel);
+}
+
+.activityHead {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+
+	h2 {
+		margin: 0;
+		font-size: var(--text-lg);
+	}
+}
+
+.activityActions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.log {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	max-height: 260px;
+	overflow: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+}
+
+.logLine,
+.logError {
+	display: grid;
+	grid-template-columns: 72px 90px 1fr;
+	gap: 8px;
+	padding: 3px 0;
+	border-bottom: 1px solid var(--border);
+}
+
+.logError {
+	color: var(--red);
+}
+
+.logTime {
+	color: var(--text-faint);
+}
+
+.logType {
+	color: var(--text-dim);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.logMessage {
+	color: var(--text);
+	overflow-wrap: anywhere;
+}
+
+.logError .logMessage {
+	color: var(--red);
+}
+
+.runErrors {
+	padding: 10px 12px;
+	border: 1px solid var(--red-line);
+	border-radius: var(--radius);
+	background: var(--red-soft);
+	color: var(--red);
+	font-size: var(--text-sm);
+
+	summary {
+		cursor: pointer;
+	}
+
+	ul {
+		margin: 8px 0 0;
+		padding-left: 18px;
+	}
+}
