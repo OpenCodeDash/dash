@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Modal } from "../../components/modal/modal.component.tsx";
 import {
 	createCampaign,
 	listCampaigns,
+	previewCampaign,
 	type ResearchCampaignStatus,
+	type ResearchCriterion,
+	type ResearchPreview,
 } from "../../research/client.ts";
 import styles from "./research-page.module.scss";
 
@@ -22,6 +26,17 @@ function statusClass(status: string): string {
 function formatDate(iso: string): string {
 	const date = new Date(iso);
 	return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
+}
+
+function sourceLabel(criterion: ResearchCriterion): string {
+	const source = criterion.source;
+	if (source.type === "field") return `field: ${source.field}`;
+	if (source.type === "derived") return `derived: ${source.evaluator}`;
+	return source.type;
+}
+
+function clamp01(value: number): number {
+	return Math.min(1, Math.max(0, value));
 }
 
 function CampaignRow({ campaign }: { campaign: ResearchCampaignStatus }) {
@@ -67,7 +82,10 @@ export function ResearchPage() {
 	const [prompt, setPrompt] = useState("");
 	const [name, setName] = useState("");
 	const [pack, setPack] = useState("property");
+	const [compiling, setCompiling] = useState(false);
 	const [starting, setStarting] = useState(false);
+	const [preview, setPreview] = useState<ResearchPreview | null>(null);
+	const [criteria, setCriteria] = useState<ResearchCriterion[]>([]);
 
 	const load = useCallback(async () => {
 		const result = await listCampaigns();
@@ -90,17 +108,33 @@ export function ResearchPage() {
 		};
 	}, [load]);
 
-	async function start(event: React.FormEvent) {
+	async function compilePreview(event: React.FormEvent) {
 		event.preventDefault();
-		if (!prompt.trim() || starting) return;
+		if (!prompt.trim() || compiling) return;
+		setCompiling(true);
+		setError(null);
+		try {
+			const result = await previewCampaign({ prompt: prompt.trim(), pack });
+			setPreview(result);
+			setCriteria(result.criteria.map((criterion) => ({ ...criterion })));
+		} catch (err) {
+			setError(errText(err));
+		} finally {
+			setCompiling(false);
+		}
+	}
+
+	async function start() {
+		if (!preview || criteria.length === 0 || starting) return;
 		setStarting(true);
 		setError(null);
 		try {
 			const result = await createCampaign({
-				prompt: prompt.trim(),
+				brief: { ...preview.brief, criteria },
 				name: name.trim() || undefined,
 				pack,
 			});
+			setPreview(null);
 			setPrompt("");
 			setName("");
 			navigate(`/research/${result.campaign.id}`);
@@ -118,13 +152,14 @@ export function ResearchPage() {
 					<div>
 						<h1>Research</h1>
 						<p className={styles.subtitle}>
-							Give it a brief. It finds listings, records evidence, ranks them
-							against your priorities, and keeps the result steerable.
+							Give it a brief. It proposes criteria, you review them, then it
+							finds listings, records evidence, and ranks them against those
+							criteria.
 						</p>
 					</div>
 				</header>
 
-				<form className={styles.form} onSubmit={start}>
+				<form className={styles.form} onSubmit={compilePreview}>
 					<label className={styles.label}>
 						What are you looking for?
 						<textarea
@@ -152,9 +187,9 @@ export function ResearchPage() {
 						<button
 							type="submit"
 							className="btn btn-primary"
-							disabled={!prompt.trim() || starting}
+							disabled={!prompt.trim() || compiling}
 						>
-							{starting ? "Starting…" : "Start research"}
+							{compiling ? "Compiling criteria…" : "Preview criteria"}
 						</button>
 					</div>
 				</form>
@@ -173,6 +208,128 @@ export function ResearchPage() {
 					</div>
 				)}
 			</div>
+
+			<Modal
+				open={preview !== null}
+				onClose={() => setPreview(null)}
+				title="Review criteria"
+				maxWidth={760}
+				footer={
+					<>
+						<button
+							type="button"
+							className="btn btn-ghost"
+							onClick={() => setPreview(null)}
+						>
+							Cancel
+						</button>
+						<button
+							type="button"
+							className="btn btn-primary"
+							disabled={criteria.length === 0 || starting}
+							onClick={() => void start()}
+						>
+							{starting ? "Starting…" : "Start research"}
+						</button>
+					</>
+				}
+			>
+				{preview && (
+					<div className={styles.preview}>
+						<p className={styles.hint}>
+							Explicit criteria came from your request. Suggested criteria are the
+							harness's additions; remove any you don't want, or tune weights.
+							After you start, it runs autonomously.
+						</p>
+
+						<div className={styles.previewCriteria}>
+							{criteria.map((criterion) => (
+								<div className={styles.criterionRow} key={criterion.key}>
+									<div className={styles.criterionMain}>
+										<div className={styles.criterionLabel}>
+											<span>{criterion.label}</span>
+											<span
+												className={`${styles.badge} ${
+													criterion.origin === "explicit"
+														? styles.badgeExplicit
+														: styles.badgeSuggested
+												}`}
+											>
+												{criterion.origin}
+											</span>
+											{criterion.hard && (
+												<span className={`${styles.badge} ${styles.badgeHard}`}>
+													hard
+												</span>
+											)}
+										</div>
+										<div className={styles.criterionMeta}>
+											{criterion.kind} · {sourceLabel(criterion)}
+											{criterion.rationale ? ` — ${criterion.rationale}` : ""}
+										</div>
+									</div>
+									<input
+										className={styles.weightInput}
+										type="number"
+										min={0}
+										max={1}
+										step={0.05}
+										value={criterion.weight}
+										aria-label={`${criterion.label} weight`}
+										onChange={(e) =>
+											setCriteria((previous) =>
+												previous.map((item) =>
+													item.key === criterion.key
+														? {
+																...item,
+																weight: clamp01(
+																	Number(e.target.value),
+																),
+															}
+														: item,
+												),
+											)
+										}
+									/>
+									<button
+										type="button"
+										className="icon-btn"
+										title={`Remove ${criterion.label}`}
+										onClick={() =>
+											setCriteria((previous) =>
+												previous.filter((item) => item.key !== criterion.key),
+											)
+										}
+									>
+										✕
+									</button>
+								</div>
+							))}
+							{criteria.length === 0 && (
+								<div className={styles.empty}>
+									No criteria left. Add some in the prompt and preview again.
+								</div>
+							)}
+						</div>
+
+						{preview.warnings.length > 0 && (
+							<div className={styles.warnings}>
+								<strong>Warnings</strong>
+								<ul>
+									{preview.warnings.map((warning, index) => (
+										<li key={index}>{warning}</li>
+									))}
+								</ul>
+							</div>
+						)}
+
+						<details className={styles.echo}>
+							<summary>Brief echo</summary>
+							<pre>{preview.echo}</pre>
+						</details>
+					</div>
+				)}
+			</Modal>
 		</div>
 	);
 }

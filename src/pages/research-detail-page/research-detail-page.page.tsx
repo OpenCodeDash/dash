@@ -11,12 +11,20 @@ import {
 	stopCampaign,
 	subscribeEvents,
 	type ResearchCampaignDetail,
+	type ResearchCriterion,
 	type ResearchResults,
 	type ResearchRow,
 } from "../../research/client.ts";
 import styles from "./research-detail-page.module.scss";
 
-const STAGES = ["discover", "collect", "vision", "score", "export"] as const;
+const STAGES = [
+	"discover",
+	"collect",
+	"text",
+	"vision",
+	"score",
+	"export",
+] as const;
 
 interface ActivityItem {
 	at: string;
@@ -47,8 +55,17 @@ function formatValue(value: unknown): string {
 	return JSON.stringify(value);
 }
 
-function money(value: unknown): string {
-	return typeof value === "number" ? `$${value}` : "—";
+function criterionFactKey(criterion: ResearchCriterion): string {
+	return criterion.source.type === "field"
+		? criterion.source.field
+		: criterion.key;
+}
+
+function criterionSourceLabel(criterion: ResearchCriterion): string {
+	const source = criterion.source;
+	if (source.type === "field") return `field:${source.field}`;
+	if (source.type === "derived") return `derived:${source.evaluator}`;
+	return source.type;
 }
 
 function RowDetail({ row }: { row: ResearchRow }) {
@@ -88,6 +105,8 @@ function RowDetail({ row }: { row: ResearchRow }) {
 							<th>Weight</th>
 							<th>Contribution</th>
 							<th>State</th>
+							<th>Origin</th>
+							<th>Source</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -110,6 +129,8 @@ function RowDetail({ row }: { row: ResearchRow }) {
 												? "ignored"
 												: "unknown"}
 								</td>
+								<td>{criterion.origin ?? "—"}</td>
+								<td>{criterion.sourceType ?? "—"}</td>
 							</tr>
 						))}
 					</tbody>
@@ -243,7 +264,12 @@ export function ResearchDetailPage() {
 
 				if (event.type === "progress") {
 					const name = typeof event.stage === "string" ? event.stage : "run";
-					if (name === "discover" || name === "collect" || name === "vision") {
+					if (
+						name === "discover" ||
+						name === "collect" ||
+						name === "text" ||
+						name === "vision"
+					) {
 						setStage(name);
 					}
 					append({
@@ -363,6 +389,11 @@ export function ResearchDetailPage() {
 
 	const campaign = detail.campaign;
 	const summary = campaign.lastSummary;
+	const criteria = detail.criteria ?? [];
+	const columns = [...criteria]
+		.filter((criterion) => criterion.weight > 0)
+		.sort((a, b) => b.weight - a.weight)
+		.slice(0, 6);
 	const currentStage = STAGES.indexOf(stage as (typeof STAGES)[number]);
 	const canResume =
 		!campaign.running &&
@@ -576,11 +607,10 @@ export function ResearchDetailPage() {
 										<th>Rank</th>
 										<th>Score</th>
 										<th>Coverage</th>
-										<th>Rent</th>
-										<th>Beds</th>
-										<th>Suburb</th>
-										<th>Commute</th>
-										<th>Parking</th>
+										<th>Listing</th>
+										{columns.map((criterion) => (
+											<th key={criterion.key}>{criterion.label}</th>
+										))}
 										<th>Gaps</th>
 									</tr>
 								</thead>
@@ -594,11 +624,27 @@ export function ResearchDetailPage() {
 											<td>{row.rank ?? "—"}</td>
 											<td>{row.score.toFixed(2)}</td>
 											<td>{row.coverage.toFixed(2)}</td>
-											<td>{money(row.fields.rent)}</td>
-											<td>{formatValue(row.fields.bedrooms)}</td>
-											<td>{formatValue(row.fields.suburb)}</td>
-											<td>{formatValue(row.fields.commute)}</td>
-											<td>{formatValue(row.fields.parking)}</td>
+											<td className={styles.listingCell}>
+												<a
+													href={row.url}
+													target="_blank"
+													rel="noreferrer"
+													onClick={(event) => event.stopPropagation()}
+												>
+													{formatValue(
+														row.fields.title ??
+															row.fields.address ??
+															row.url,
+													)}
+												</a>
+											</td>
+											{columns.map((criterion) => (
+												<td key={criterion.key}>
+													{formatValue(
+														row.fields[criterionFactKey(criterion)],
+													)}
+												</td>
+											))}
 											<td>{row.gaps.length}</td>
 										</tr>
 									))}
@@ -607,6 +653,30 @@ export function ResearchDetailPage() {
 						</div>
 					)}
 				</section>
+
+				{criteria.length > 0 && (
+					<details className={styles.briefBox}>
+						<summary>Criteria ({criteria.length})</summary>
+						<ul className={styles.criteriaList}>
+							{criteria.map((criterion) => (
+								<li key={criterion.key}>
+									<strong>{criterion.label}</strong>{" "}
+									{criterion.weight.toFixed(2)} · {criterion.origin} ·{" "}
+									{criterionSourceLabel(criterion)}
+									{criterion.hard ? " · hard" : ""}
+									{criterion.rationale ? ` — ${criterion.rationale}` : ""}
+								</li>
+							))}
+						</ul>
+						{detail.warnings && detail.warnings.length > 0 && (
+							<ul className={styles.criteriaWarnings}>
+								{detail.warnings.map((warning, index) => (
+									<li key={index}>{warning}</li>
+								))}
+							</ul>
+						)}
+					</details>
+				)}
 
 				<details className={styles.briefBox}>
 					<summary>Brief</summary>

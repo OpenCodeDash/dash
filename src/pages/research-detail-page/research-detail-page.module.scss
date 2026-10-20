@@ -460,3 +460,31 @@
 		padding-left: 18px;
 	}
 }
+
+.listingCell {
+	max-width: 320px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+
+	a {
+		color: var(--accent);
+	}
+}
+
+.criteriaList {
+	margin: 8px 0 0;
+	padding-left: 18px;
+	color: var(--text-dim);
+	font-size: var(--text-sm);
+
+	strong {
+		color: var(--text);
+	}
+}
+
+.criteriaWarnings {
+	margin: 8px 0 0;
+	padding-left: 18px;
+	color: var(--yellow);
+	font-size: var(--text-sm);
+}
