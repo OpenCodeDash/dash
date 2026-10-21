@@ -299,3 +299,32 @@
 		color: var(--text-dim);
 	}
 }
+
+.sourceScope {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 8px 10px;
+
+	summary {
+		cursor: pointer;
+		color: var(--text-dim);
+		font-size: var(--text-sm);
+	}
+}
+
+.sourceGrid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+	margin: 10px 0 8px;
+
+	.labelInline {
+		min-width: 0;
+	}
+}
+
+@media (max-width: 640px) {
+	.sourceGrid {
+		grid-template-columns: 1fr;
+	}
+}
