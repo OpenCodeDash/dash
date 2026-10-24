@@ -9,6 +9,8 @@ import {
 	type ResearchCampaignStatus,
 	type ResearchCriterion,
 	type ResearchPreview,
+	type ResearchSourceScope,
+	type ResearchWebScope,
 } from "../../research/client.ts";
 import styles from "./research-page.module.scss";
 
@@ -40,6 +42,108 @@ function clamp01(value: number): number {
 	return Math.min(1, Math.max(0, value));
 }
 
+
+interface SourceScopeForm {
+	web: ResearchWebScope;
+	allow: string;
+	deny: string;
+	prefer: string;
+}
+
+function splitList(value: string): string[] {
+	return [
+		...new Set(
+			value
+				.split(",")
+				.map((entry) => entry.trim())
+				.filter(Boolean),
+		),
+	];
+}
+
+function sourceScopeForm(scope: ResearchSourceScope | undefined): SourceScopeForm {
+	return {
+		web: scope?.web ?? "open",
+		allow: (scope?.allow ?? []).join(", "),
+		deny: (scope?.deny ?? []).join(", "),
+		prefer: (scope?.prefer ?? []).join(", "),
+	};
+}
+
+function sourceScopeValue(form: SourceScopeForm): ResearchSourceScope {
+	const allow = splitList(form.allow);
+	const deny = splitList(form.deny);
+	const prefer = splitList(form.prefer);
+	return {
+		web: form.web,
+		...(allow.length ? { allow } : {}),
+		...(deny.length ? { deny } : {}),
+		...(prefer.length ? { prefer } : {}),
+	};
+}
+
+function numberOr(value: unknown): number | undefined {
+	return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function harnessBrief(
+	preview: ResearchPreview,
+	criteria: ResearchCriterion[],
+	sources: SourceScopeForm,
+	htmlMax: number | undefined,
+): Record<string, unknown> {
+	const brief = preview.brief;
+	const anchors = (brief.anchors ?? {}) as {
+		work?: unknown;
+		commute?: Record<string, unknown>;
+	};
+	const hard = (brief.hard ?? {}) as Record<string, unknown>;
+	const budgets = (brief.budgets ?? {}) as Record<string, unknown>;
+	const commute = anchors.commute;
+	return {
+		version: brief.version,
+		domain: brief.domain,
+		prompt: brief.prompt,
+		anchors: {
+			work: anchors.work,
+			...(commute
+				? {
+						commute: {
+							mode: commute.mode,
+							max_minutes:
+								numberOr(commute.maxMinutes) ??
+								numberOr(commute.max_minutes),
+							hard: commute.hard,
+						},
+					}
+				: {}),
+		},
+		hard: {
+			rent_max: numberOr(hard.rentMax) ?? numberOr(hard.rent_max),
+			bedrooms: hard.bedrooms,
+			areas: hard.areas,
+			required: hard.required,
+		},
+		criteria,
+		unknown_policy: brief.unknownPolicy ?? brief.unknown_policy,
+		sources: sourceScopeValue(sources),
+		budgets: {
+			max_listings:
+				numberOr(budgets.maxListings) ?? numberOr(budgets.max_listings),
+			max_usd: numberOr(budgets.maxUsd) ?? numberOr(budgets.max_usd),
+			max_minutes:
+				numberOr(budgets.maxMinutes) ?? numberOr(budgets.max_minutes),
+			vision_max:
+				numberOr(budgets.visionMax) ?? numberOr(budgets.vision_max),
+			html_max:
+				htmlMax ?? numberOr(budgets.htmlMax) ?? numberOr(budgets.html_max),
+		},
+		assumptions: brief.assumptions,
+		warnings: brief.warnings,
+	};
+}
+
+
 function CampaignRow({
 	campaign,
 	onDelete,
@@ -47,6 +151,7 @@ function CampaignRow({
 	campaign: ResearchCampaignStatus;
 	onDelete: (campaign: ResearchCampaignStatus) => void;
 }) {
+
 	const navigate = useNavigate();
 	const summary = campaign.lastSummary;
 
@@ -103,6 +208,13 @@ export function ResearchPage() {
 	const [starting, setStarting] = useState(false);
 	const [preview, setPreview] = useState<ResearchPreview | null>(null);
 	const [criteria, setCriteria] = useState<ResearchCriterion[]>([]);
+	const [sources, setSources] = useState<SourceScopeForm>({
+		web: "open",
+		allow: "",
+		deny: "",
+		prefer: "",
+	});
+	const [htmlMax, setHtmlMax] = useState("");
 
 	const load = useCallback(async () => {
 		const result = await listCampaigns();
@@ -134,6 +246,12 @@ export function ResearchPage() {
 			const result = await previewCampaign({ prompt: prompt.trim(), pack });
 			setPreview(result);
 			setCriteria(result.criteria.map((criterion) => ({ ...criterion })));
+			setSources(sourceScopeForm(result.brief.sources));
+			setHtmlMax(
+				typeof result.brief.budgets?.htmlMax === "number"
+					? String(result.brief.budgets.htmlMax)
+					: "",
+			);
 		} catch (err) {
 			setError(errText(err));
 		} finally {
@@ -163,8 +281,16 @@ export function ResearchPage() {
 		setStarting(true);
 		setError(null);
 		try {
+			const parsedHtmlMax = htmlMax.trim() ? Number(htmlMax) : undefined;
 			const result = await createCampaign({
-				brief: { ...preview.brief, criteria },
+				brief: harnessBrief(
+					preview,
+					criteria,
+					sources,
+					parsedHtmlMax !== undefined && Number.isFinite(parsedHtmlMax)
+						? Math.max(0, Math.floor(parsedHtmlMax))
+						: undefined,
+				),
 				name: name.trim() || undefined,
 				pack,
 			});
@@ -215,7 +341,10 @@ export function ResearchPage() {
 						<label className={styles.labelInline}>
 							Pack
 							<select value={pack} onChange={(e) => setPack(e.target.value)}>
-								<option value="property">Property</option>
+								<option value="generic">Generic (anything)</option>
+								<option value="property">Property / rentals</option>
+								<option value="cars">Cars / vehicles</option>
+								<option value="laptops">Laptops / computers</option>
 							</select>
 						</label>
 						<button
@@ -279,6 +408,82 @@ export function ResearchPage() {
 							harness's additions; remove any you don't want, or tune weights.
 							After you start, it runs autonomously.
 						</p>
+
+						<details className={styles.sourceScope}>
+							<summary>Sources &amp; budget</summary>
+							<div className={styles.sourceGrid}>
+								<label className={styles.labelInline}>
+									Web
+									<select
+										value={sources.web}
+										onChange={(e) =>
+											setSources((previous) => ({
+												...previous,
+												web: e.target.value as ResearchWebScope,
+											}))
+										}
+									>
+										<option value="open">Open web</option>
+										<option value="structured-only">Structured only</option>
+										<option value="off">Allowed sources only</option>
+									</select>
+								</label>
+								<label className={styles.labelInline}>
+									HTML fallback max
+									<input
+										type="number"
+										min={0}
+										step={1}
+										value={htmlMax}
+										placeholder="25"
+										onChange={(e) => setHtmlMax(e.target.value)}
+									/>
+								</label>
+								<label className={styles.labelInline}>
+									Allow
+									<input
+										value={sources.allow}
+										placeholder="trademe, trademe.co.nz"
+										onChange={(e) =>
+											setSources((previous) => ({
+												...previous,
+												allow: e.target.value,
+											}))
+										}
+									/>
+								</label>
+								<label className={styles.labelInline}>
+									Deny
+									<input
+										value={sources.deny}
+										placeholder="facebook.com"
+										onChange={(e) =>
+											setSources((previous) => ({
+												...previous,
+												deny: e.target.value,
+											}))
+										}
+									/>
+								</label>
+								<label className={styles.labelInline}>
+									Prefer
+									<input
+										value={sources.prefer}
+										placeholder="trademe"
+										onChange={(e) =>
+											setSources((previous) => ({
+												...previous,
+												prefer: e.target.value,
+											}))
+										}
+									/>
+								</label>
+							</div>
+							<p className={styles.hint}>
+								Open web is the default. Use “allowed sources only” to forbid
+								anything outside the allow list.
+							</p>
+						</details>
 
 						<div className={styles.previewCriteria}>
 							{criteria.map((criterion) => (

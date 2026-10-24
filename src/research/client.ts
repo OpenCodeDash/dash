@@ -53,8 +53,22 @@ export interface ResearchCriterion {
 	rationale?: string;
 }
 
+export type ResearchWebScope = "open" | "structured-only" | "off";
+
+export interface ResearchSourceScope {
+	web: ResearchWebScope;
+	allow?: string[];
+	deny?: string[];
+	prefer?: string[];
+}
+
+export interface ResearchPreviewBrief extends Record<string, unknown> {
+	sources?: ResearchSourceScope;
+	budgets?: Record<string, unknown>;
+}
+
 export interface ResearchPreview {
-	brief: Record<string, unknown>;
+	brief: ResearchPreviewBrief;
 	criteria: ResearchCriterion[];
 	echo: string;
 	warnings: string[];
