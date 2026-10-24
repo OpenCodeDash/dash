@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Modal } from "../../components/modal/modal.component.tsx";
 import {
 	createCampaign,
+	deleteCampaign,
 	listCampaigns,
 	previewCampaign,
 	type ResearchCampaignStatus,
@@ -40,6 +41,7 @@ function sourceLabel(criterion: ResearchCriterion): string {
 function clamp01(value: number): number {
 	return Math.min(1, Math.max(0, value));
 }
+
 
 interface SourceScopeForm {
 	web: ResearchWebScope;
@@ -141,11 +143,20 @@ function harnessBrief(
 	};
 }
 
-function CampaignRow({ campaign }: { campaign: ResearchCampaignStatus }) {
+
+function CampaignRow({
+	campaign,
+	onDelete,
+}: {
+	campaign: ResearchCampaignStatus;
+	onDelete: (campaign: ResearchCampaignStatus) => void;
+}) {
+
 	const navigate = useNavigate();
 	const summary = campaign.lastSummary;
 
 	return (
+		<div className={styles.rowWrap}>
 		<button
 			type="button"
 			className={styles.row}
@@ -174,6 +185,15 @@ function CampaignRow({ campaign }: { campaign: ResearchCampaignStatus }) {
 			</div>
 			<span className={styles.open}>Open →</span>
 		</button>
+			<button
+				type="button"
+				className={styles.delete}
+				title={`Delete ${campaign.name}`}
+				onClick={() => onDelete(campaign)}
+			>
+				Delete
+			</button>
+		</div>
 	);
 }
 
@@ -236,6 +256,23 @@ export function ResearchPage() {
 			setError(errText(err));
 		} finally {
 			setCompiling(false);
+		}
+	}
+
+	async function remove(campaign: ResearchCampaignStatus) {
+		if (
+			!window.confirm(
+				`Delete "${campaign.name}"? Its database, media, and exports are removed.`,
+			)
+		) {
+			return;
+		}
+		setError(null);
+		try {
+			await deleteCampaign(campaign.id);
+			await load();
+		} catch (err) {
+			setError(errText(err));
 		}
 	}
 
@@ -329,7 +366,11 @@ export function ResearchPage() {
 				) : (
 					<div className={styles.list}>
 						{campaigns.map((campaign) => (
-							<CampaignRow key={campaign.id} campaign={campaign} />
+							<CampaignRow
+								key={campaign.id}
+								campaign={campaign}
+								onDelete={(item) => void remove(item)}
+							/>
 						))}
 					</div>
 				)}

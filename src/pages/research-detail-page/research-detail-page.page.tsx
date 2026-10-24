@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Modal } from "../../components/modal/modal.component.tsx";
 import {
+	deleteCampaign,
 	downloadCsv,
 	getCampaign,
 	getResults,
@@ -327,6 +328,7 @@ export function ResearchDetailPage() {
 		);
 	}, [id, refresh, scheduleRefresh]);
 
+	const navigate = useNavigate();
 	const running = detail?.campaign.running ?? false;
 	useEffect(() => {
 		if (!running) return;
@@ -346,6 +348,26 @@ export function ResearchDetailPage() {
 		} catch (err) {
 			setError(errText(err));
 		} finally {
+			setBusy(false);
+		}
+	}
+
+	async function remove() {
+		if (!id) return;
+		if (
+			!window.confirm(
+				`Delete "${detail?.campaign.name ?? id}"? Its database, media, and exports are removed.`,
+			)
+		) {
+			return;
+		}
+		setBusy(true);
+		setError(null);
+		try {
+			await deleteCampaign(id);
+			navigate("/research");
+		} catch (err) {
+			setError(errText(err));
 			setBusy(false);
 		}
 	}
@@ -453,6 +475,19 @@ export function ResearchDetailPage() {
 						)}
 						<button type="button" className="btn" onClick={() => void exportCsv()}>
 							Export CSV
+						</button>
+						<button
+							type="button"
+							className="btn btn-danger"
+							disabled={busy || campaign.running}
+							title={
+								campaign.running
+									? "Stop the campaign before deleting it"
+									: "Delete this campaign"
+							}
+							onClick={() => void remove()}
+						>
+							Delete
 						</button>
 					</div>
 				</header>

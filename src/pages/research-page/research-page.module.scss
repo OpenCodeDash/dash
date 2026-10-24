@@ -70,6 +70,26 @@
 	gap: 8px;
 }
 
+	.rowWrap {
+		display: flex;
+		gap: 8px;
+		align-items: stretch;
+	}
+
+	.delete {
+		padding: 0 14px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+		color: var(--danger, #c0392b);
+		cursor: pointer;
+		font: inherit;
+	}
+
+	.delete:hover {
+		border-color: var(--danger, #c0392b);
+	}
+
 .row {
 	display: flex;
 	align-items: center;
