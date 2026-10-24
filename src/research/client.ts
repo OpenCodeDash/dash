@@ -200,6 +200,12 @@ export function resumeCampaign(id: string): Promise<unknown> {
 	});
 }
 
+export function deleteCampaign(id: string): Promise<unknown> {
+	return request(`/research/campaigns/${encodeURIComponent(id)}`, {
+		method: "DELETE",
+	});
+}
+
 export function stopCampaign(id: string): Promise<unknown> {
 	return request(`/research/campaigns/${encodeURIComponent(id)}/stop`, {
 		method: "POST",
