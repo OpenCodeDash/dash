@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
-import type { ToolPart, ToolState } from "react-opencode";
+import type { FilePart, ToolPart, ToolState } from "react-opencode";
 
 export interface ToolView {
 	summary?: (state: ToolState) => ReactNode;
 	body: (part: ToolPart) => ReactNode;
+	/** Open the card automatically when this becomes true. */
+	defaultOpen?: (part: ToolPart) => boolean;
 }
 
 export interface QuestionInput {
@@ -46,6 +48,30 @@ export function inputOf(state: ToolState): Record<string, unknown> {
 
 export function metadataOf(state: ToolState): Record<string, unknown> {
 	return (state as { metadata?: Record<string, unknown> }).metadata ?? {};
+}
+
+function isFilePart(v: unknown): v is FilePart {
+	const value = obj(v);
+	return value?.type === "file" && typeof value.url === "string";
+}
+
+/**
+ * Tool-result attachments (e.g. an image loaded by the read tool). The
+ * react-opencode ToolState type omits them, but opencode stores them on the
+ * completed state.
+ */
+export function attachmentsOf(state: ToolState): FilePart[] {
+	const attachments = (state as { attachments?: unknown }).attachments;
+	return Array.isArray(attachments) ? attachments.filter(isFilePart) : [];
+}
+
+export function imageAttachmentsOf(state: ToolState): FilePart[] {
+	return attachmentsOf(state).filter(
+		(file) =>
+			typeof file.mime === "string" &&
+			file.mime.startsWith("image/") &&
+			/^(data:image\/|https?:\/\/)/i.test(file.url),
+	);
 }
 
 export function diffOf(metadata: Record<string, unknown>): string | undefined {

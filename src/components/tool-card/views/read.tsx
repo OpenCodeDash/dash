@@ -1,5 +1,5 @@
-import { inputOf, metadataOf, str, type ToolView } from "./types.ts";
-import { CodeLines, Output } from "./shared.tsx";
+import { imageAttachmentsOf, inputOf, metadataOf, str, type ToolView } from "./types.ts";
+import { CodeLines, Images, Output } from "./shared.tsx";
 
 function readFileContent(output: string): string | undefined {
 	return output.match(/<content>\n?([\s\S]*?)\n?<\/content>/)?.[1];
@@ -7,8 +7,11 @@ function readFileContent(output: string): string | undefined {
 
 export const readTool: ToolView = {
 	summary: (state) => str(inputOf(state).filePath),
+	defaultOpen: (part) => imageAttachmentsOf(part.state).length > 0,
 	body: (part) => {
 		const { state } = part;
+		const images = imageAttachmentsOf(state);
+		if (images.length > 0) return <Images images={images} />;
 		const content = state.status === "completed" ? readFileContent(state.output) : undefined;
 		const truncated = metadataOf(state).truncated === true;
 		return (

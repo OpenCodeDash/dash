@@ -13,14 +13,16 @@ const STATUS_ICON: Record<ToolPart["state"]["status"], string> = {
 };
 
 export function ToolCard({ part }: { part: ToolPart }) {
-	const [open, setOpen] = useState(false);
 	const state = part.state;
 	const view = viewFor(part.tool);
 	const summary: ReactNode = view?.summary?.(state) ?? genericTitle(state);
+	const autoOpen = view?.defaultOpen?.(part) ?? false;
+	const [override, setOverride] = useState<boolean | undefined>(undefined);
+	const open = override ?? autoOpen;
 
 	return (
 		<div className={styles.tool}>
-			<button type="button" className={styles.head} onClick={() => setOpen((o) => !o)}>
+			<button type="button" className={styles.head} onClick={() => setOverride(!open)}>
 				<span className={styles[`status_${state.status}`]}>{STATUS_ICON[state.status]}</span>
 				<span className={styles.name}>{part.tool}</span>
 				{summary && <span className={styles.title}>{summary}</span>}
