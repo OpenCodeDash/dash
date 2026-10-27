@@ -1,4 +1,4 @@
-import type { Todo, ToolState } from "react-opencode";
+import type { FilePart, Todo, ToolState } from "react-opencode";
 import styles from "../tool-card.module.scss";
 
 const TODO_ICON: Record<Todo["status"], string> = {
@@ -31,6 +31,22 @@ export function Output({ state, className }: { state: ToolState; className?: str
 		return <pre className={`${styles.pre} ${styles.preError} ${className ?? ""}`}>{state.error}</pre>;
 	}
 	return null;
+}
+
+export function Images({ images }: { images: FilePart[] }) {
+	return (
+		<div className={styles.images}>
+			{images.map((image) => (
+				<img
+					key={image.id}
+					className={styles.image}
+					src={image.url}
+					alt={image.filename ?? "image"}
+					loading="lazy"
+				/>
+			))}
+		</div>
+	);
 }
 
 export function CodeLines({ text }: { text: string }) {
