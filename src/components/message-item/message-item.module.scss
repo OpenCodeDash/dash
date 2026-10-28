@@ -174,3 +174,34 @@
 	vertical-align: text-bottom;
 	animation: pulse 1s step-end infinite;
 }
+
+/* Attached files: inline images, chips for everything else. */
+.attachments {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.attachmentImageLink {
+	display: inline-block;
+	max-width: 100%;
+}
+
+.attachmentImage {
+	display: block;
+	max-width: 100%;
+	max-height: 320px;
+	object-fit: contain;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--bg-input);
+}
+
+.attachmentChip {
+	text-decoration: none;
+
+	&:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+}

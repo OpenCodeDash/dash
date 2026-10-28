@@ -141,3 +141,101 @@
 	gap: 8px;
 	flex-wrap: wrap;
 }
+
+.queueFiles {
+	flex: none;
+	font-size: 11px;
+	color: var(--text-faint);
+}
+
+/* Attachment previews sit above the textarea, inside the composer frame. */
+.attachments {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.attachment {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	max-width: 240px;
+	padding: 4px 6px 4px 4px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--bg-input);
+}
+
+.attachmentThumb {
+	flex: none;
+	width: 40px;
+	height: 40px;
+	object-fit: cover;
+	border-radius: 4px;
+	background: var(--bg-elevated);
+}
+
+.attachmentExt {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 4px;
+	background: var(--bg-elevated);
+	border: 1px solid var(--border);
+	color: var(--text-faint);
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+}
+
+.attachmentInfo {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.attachmentName {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 12px;
+	color: var(--text);
+}
+
+.attachmentSize {
+	font-size: 10px;
+	color: var(--text-faint);
+}
+
+.attachmentRemove {
+	flex: none;
+	border: none;
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
+	font-size: 11px;
+	line-height: 1;
+	padding: 3px 5px;
+	border-radius: 4px;
+
+	&:hover {
+		background: var(--bg-hover);
+		color: var(--text);
+	}
+}
+
+.dragOver {
+	border-color: var(--accent);
+	background: var(--accent-soft);
+}
+
+/* The dedicated camera picker only makes sense on touch/mobile devices. */
+@media (hover: hover) and (pointer: fine) {
+	.cameraButton {
+		display: none;
+	}
+}

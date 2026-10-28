@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { Attachment } from "../components/prompt-composer/attachments.ts";
 
 /** A message the user composed while the session was busy. */
 export interface QueuedMessage {
 	id: string;
 	text: string;
+	attachments: Attachment[];
 	modelKey: string;
 	agent: string;
 }

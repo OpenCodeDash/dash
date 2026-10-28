@@ -24,7 +24,8 @@ UI never needs to poll or reload.
   autoscroll, stop.
 - **Approvals** — inline permission prompts (once / always / reject) and
   interactive question prompts (options + free-text answer).
-- **Composer** — model and agent pickers, send, stop.
+- **Composer** — model and agent pickers, send, stop; attach images, text, and
+  PDFs (picker, drag/drop, paste, or the mobile camera) up to 20 MiB.
 - **Panels** — Todos (the linked board task's checklist when the session has one,
   else the session's own), file changes / diff, and a Server panel showing MCP
   servers and configured plugins.
@@ -113,7 +114,7 @@ Headless suite in `e2e/`, driven over the Chrome DevTools Protocol with no
 external deps (Node 24 `fetch` + `WebSocket`). See `e2e/README.md` for details.
 
 ```sh
-npm run test:e2e              # structural + lifecycle + subagent + refresh + bench + boards + tasks + mobile-swipe + dropdown
+npm run test:e2e              # structural + lifecycle + subagent + refresh + attachments + bench + boards + tasks + mobile-swipe + dropdown
 npm run test:e2e:model        # also runs model-backed checks (needs a working model)
 ```
 

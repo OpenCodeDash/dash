@@ -17,6 +17,56 @@ import styles from "./message-item.module.scss";
 const isText = (p: Part): p is TextPart => p.type === "text";
 const isFile = (p: Part): p is FilePart => p.type === "file";
 
+function isDisplayableImage(part: FilePart): boolean {
+	return (
+		typeof part.mime === "string" &&
+		part.mime.startsWith("image/") &&
+		/^(data:image\/|https?:\/\/)/i.test(part.url)
+	);
+}
+
+/**
+ * An attached file. Images render inline so both the user's upload and images
+ * the agent read back are visible; everything else is a chip that downloads the
+ * inline payload (or opens an http(s) URL).
+ */
+function FileAttachment({ part }: { part: FilePart }) {
+	const name = part.filename ?? "attachment";
+	if (isDisplayableImage(part)) {
+		return (
+			<a
+				className={styles.attachmentImageLink}
+				href={part.url}
+				target="_blank"
+				rel="noreferrer"
+				title={name}
+			>
+				<img className={styles.attachmentImage} src={part.url} alt={name} loading="lazy" />
+			</a>
+		);
+	}
+	const linkable = /^(data:|https?:\/\/)/i.test(part.url);
+	if (!linkable) return <span className="chip">{name}</span>;
+	if (part.url.startsWith("data:")) {
+		return (
+			<a className={`chip ${styles.attachmentChip}`} href={part.url} download={name} title={name}>
+				{name}
+			</a>
+		);
+	}
+	return (
+		<a
+			className={`chip ${styles.attachmentChip}`}
+			href={part.url}
+			target="_blank"
+			rel="noreferrer"
+			title={name}
+		>
+			{name}
+		</a>
+	);
+}
+
 type AssistantModelCarrier = {
 	model?: SessionModelRef;
 	providerID?: string;
@@ -124,14 +174,21 @@ export function MessageItem({
 					/>
 				</div>
 				<div className={styles.bubble}>
-					{parts.filter(isText).map((p) => (
-						<p key={p.id}>{p.text}</p>
-					))}
-					{parts.filter(isFile).map((p) => (
-						<span key={p.id} className="chip">
-							{p.filename ?? p.url}
-						</span>
-					))}
+					{/* Synthetic text (attachment decode / read-tool preamble) is for the
+					    model, not the transcript; the file part below represents it. */}
+					{parts
+						.filter(isText)
+						.filter((p) => !p.synthetic)
+						.map((p) => (
+							<p key={p.id}>{p.text}</p>
+						))}
+					{parts.some(isFile) && (
+						<div className={styles.attachments}>
+							{parts.filter(isFile).map((p) => (
+								<FileAttachment key={p.id} part={p} />
+							))}
+						</div>
+					)}
 				</div>
 			</div>
 		);
@@ -220,7 +277,7 @@ function PartView({ part }: { part: Part }) {
 				</div>
 			);
 		case "file":
-			return <span className="chip">{part.filename ?? part.url}</span>;
+			return <FileAttachment part={part} />;
 		case "subtask":
 			return <span className="chip">{part.description}</span>;
 		case "agent":

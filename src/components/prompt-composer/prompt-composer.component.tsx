@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type ClipboardEvent,
+	type DragEvent,
+} from "react";
 import {
 	useAgents,
 	useClientActions,
@@ -10,10 +17,17 @@ import {
 	useProviders,
 	type Message,
 	type Part,
+	type PartInput,
 } from "react-opencode";
 import { useMessageQueue, type QueuedMessage } from "../../hooks/use-message-queue.ts";
 import { compactSession } from "../../server.ts";
 import { Dropdown } from "../dropdown/dropdown.component.tsx";
+import {
+	formatBytes,
+	isImageAttachment,
+	prepareAttachments,
+	type Attachment,
+} from "./attachments.ts";
 import styles from "./prompt-composer.module.scss";
 import { commandQuery, filterCommands, mergeCommands, parseSlashCommand } from "./slash-commands.ts";
 
@@ -42,6 +56,28 @@ function agentOf(message: Message, parts: Part[]): string | undefined {
 	return (message as MessageMeta).agent;
 }
 
+function toFileParts(attachments: Attachment[]): PartInput[] {
+	return attachments.map((attachment) => ({
+		type: "file",
+		url: attachment.dataUrl,
+		mime: attachment.mime,
+		filename: attachment.name,
+	}));
+}
+
+/** Text first, then files, so the instruction reads before its attachments. */
+function partsFor(text: string, attachments: Attachment[]): PartInput[] {
+	const parts = toFileParts(attachments);
+	if (text) parts.unshift({ type: "text", text });
+	return parts;
+}
+
+function extensionOf(name: string): string {
+	const dot = name.lastIndexOf(".");
+	if (dot <= 0 || dot === name.length - 1) return "FILE";
+	return name.slice(dot + 1).slice(0, 4).toUpperCase();
+}
+
 interface Prefill {
 	/** Text to drop into the composer. */
 	text: string;
@@ -68,12 +104,18 @@ export function PromptComposer({
 	const messages = useMessages(sessionId);
 	const [text, setText] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const [attachError, setAttachError] = useState<string | null>(null);
+	const [attachments, setAttachments] = useState<Attachment[]>([]);
+	const [dragOver, setDragOver] = useState(false);
 	const [sending, setSending] = useState(false);
 	const [activeIndex, setActiveIndex] = useState(0);
 	// Dismissed by Escape until the text changes again, so the menu stays closed
 	// while the user keeps editing the same command.
 	const [dismissed, setDismissed] = useState(false);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	// Separate picker with `capture` so mobile can open the camera directly.
+	const cameraInputRef = useRef<HTMLInputElement>(null);
 	// Reverting to a message seeds the composer with that message's text so it can
 	// be edited and re-sent. The `id` guards against re-applying the same prefill.
 	const appliedPrefill = useRef<number | null>(null);
@@ -122,6 +164,7 @@ export function PromptComposer({
 	const agent = agentChoice ?? derived.agent;
 
 	const submitting = sending || busy;
+	const hasInput = text.trim().length > 0 || attachments.length > 0;
 	const { queue, enqueue, remove } = useMessageQueue(busy, sendQueued);
 
 	// Slash menu: only while the user is still typing the command name (no
@@ -138,26 +181,69 @@ export function PromptComposer({
 		setActiveIndex(0);
 	}
 
-	async function dispatch(raw: string, modelKey: string, agent: string): Promise<void> {
+	async function addFiles(files: File[] | FileList | null) {
+		const list = files ? Array.from(files) : [];
+		if (!list.length) return;
+		setAttachError(null);
+		const existingBytes = attachments.reduce((total, attachment) => total + attachment.size, 0);
+		const prepared = await prepareAttachments(list, existingBytes);
+		if (prepared.attachments.length) {
+			setAttachments((current) => [...current, ...prepared.attachments]);
+		}
+		if (prepared.errors.length) setAttachError(prepared.errors.join(" "));
+	}
+
+	function removeAttachment(id: string) {
+		setAttachments((current) => current.filter((attachment) => attachment.id !== id));
+	}
+
+	function handlePaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+		const files: File[] = [];
+		for (const item of Array.from(event.clipboardData.items)) {
+			if (item.kind !== "file") continue;
+			const file = item.getAsFile();
+			if (file) files.push(file);
+		}
+		if (!files.length) return;
+		event.preventDefault();
+		void addFiles(files);
+	}
+
+	function handleDrop(event: DragEvent<HTMLDivElement>) {
+		if (!event.dataTransfer.files.length) return;
+		event.preventDefault();
+		setDragOver(false);
+		void addFiles(event.dataTransfer.files);
+	}
+
+	async function dispatch(
+		raw: string,
+		modelKey: string,
+		agent: string,
+		files: Attachment[],
+	): Promise<void> {
 		const parsed = parseSlashCommand(raw);
 		const compacting = parsed?.name === "compact";
 		const serverCommand = parsed && !compacting && commands.some((c) => c.name === parsed.name) ? parsed : null;
 		if (compacting) {
+			if (files.length) throw new Error("Attachments can't be used with /compact.");
 			await compactSession(client.url, sessionId);
 			return;
 		}
 		if (serverCommand) {
+			const fileParts = toFileParts(files);
 			await command(sessionId, {
 				command: serverCommand.name,
 				arguments: serverCommand.arguments,
 				agent: agent || undefined,
 				model: modelKey || undefined,
+				parts: fileParts.length ? fileParts : undefined,
 			});
 			return;
 		}
 		const [providerID, ...rest] = modelKey.split("/");
 		await prompt({
-			parts: [{ type: "text", text: raw }],
+			parts: partsFor(raw, files),
 			model: modelKey ? { providerID, modelID: rest.join("/") } : undefined,
 			agent: agent || undefined,
 		});
@@ -168,7 +254,7 @@ export function PromptComposer({
 	async function sendQueued(message: QueuedMessage) {
 		setError(null);
 		try {
-			await dispatch(message.text, message.modelKey, message.agent);
+			await dispatch(message.text, message.modelKey, message.agent, message.attachments);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : String(e));
 			throw e;
@@ -178,46 +264,53 @@ export function PromptComposer({
 	// Queue the current input; it runs after the active turn finishes.
 	function queueMessage() {
 		const trimmed = text.trim();
-		if (!trimmed || !busy) return;
+		if ((!trimmed && attachments.length === 0) || !busy) return;
 		setError(null);
-		enqueue({ text: trimmed, modelKey, agent });
+		enqueue({ text: trimmed, attachments, modelKey, agent });
 		setText("");
+		setAttachments([]);
 	}
 
 	// Steer the active turn now via the async endpoint. The running loop absorbs
 	// the message at its next safe boundary. Slash commands are queue-only.
 	async function steer() {
 		const trimmed = text.trim();
-		if (!trimmed || !busy || parseSlashCommand(trimmed)) return;
+		if ((!trimmed && attachments.length === 0) || !busy || parseSlashCommand(trimmed)) return;
+		const files = attachments;
 		setError(null);
 		setText("");
+		setAttachments([]);
 		try {
 			const [providerID, ...rest] = modelKey.split("/");
 			await client.promptAsync(sessionId, {
-				parts: [{ type: "text", text: trimmed }],
+				parts: partsFor(trimmed, files),
 				model: modelKey ? { providerID, modelID: rest.join("/") } : undefined,
 				agent: agent || undefined,
 			});
 		} catch (e) {
 			setError(e instanceof Error ? e.message : String(e));
 			setText((cur) => (cur ? cur : trimmed));
+			setAttachments((cur) => (cur.length ? cur : files));
 		}
 	}
 
 	async function submit() {
 		const trimmed = text.trim();
-		if (!trimmed || submitting) return;
+		if ((!trimmed && attachments.length === 0) || submitting) return;
+		const files = attachments;
 		setError(null);
 		setSending(true);
 		// Clear optimistically: the sync prompt endpoint resolves only after the
 		// whole turn finishes, so waiting to clear leaves the text sitting there.
 		setText("");
+		setAttachments([]);
 		try {
-			await dispatch(trimmed, modelKey, agent);
+			await dispatch(trimmed, modelKey, agent, files);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : String(e));
 			// Restore the failed message unless the user already started typing.
 			setText((cur) => (cur ? cur : trimmed));
+			setAttachments((cur) => (cur.length ? cur : files));
 		} finally {
 			setSending(false);
 		}
@@ -225,13 +318,29 @@ export function PromptComposer({
 
 	return (
 		<div className={styles.wrap}>
-			{error && <div className={styles.error}>{error}</div>}
+			{error && (
+				<div className={styles.error} role="alert">
+					{error}
+				</div>
+			)}
+			{attachError && (
+				<div className={styles.error} role="alert">
+					{attachError}
+				</div>
+			)}
 			{queue.length > 0 && (
 				<div className={styles.queue}>
 					<div className={styles.queueHeader}>Queued ({queue.length})</div>
 					{queue.map((message) => (
 						<div key={message.id} className={styles.queueItem}>
-							<span className={styles.queueText}>{message.text}</span>
+							<span className={styles.queueText}>
+								{message.text || message.attachments.map((attachment) => attachment.name).join(", ")}
+							</span>
+							{message.attachments.length > 0 && (
+								<span className={styles.queueFiles}>
+									{message.attachments.length} file{message.attachments.length === 1 ? "" : "s"}
+								</span>
+							)}
 							<button
 								type="button"
 								className={styles.queueRemove}
@@ -245,7 +354,75 @@ export function PromptComposer({
 					))}
 				</div>
 			)}
-			<div className={styles.composer}>
+			<div
+				className={`${styles.composer} ${dragOver ? styles.dragOver : ""}`}
+				onDragOver={(event) => {
+					if (!Array.from(event.dataTransfer.types).includes("Files")) return;
+					event.preventDefault();
+					setDragOver(true);
+				}}
+				onDragLeave={(event) => {
+					if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
+					setDragOver(false);
+				}}
+				onDrop={handleDrop}
+			>
+				<input
+					ref={fileInputRef}
+					type="file"
+					multiple
+					hidden
+					accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,text/*,application/pdf,application/json,application/xml,application/yaml,application/x-yaml,.md,.txt,.csv,.log,.json,.yaml,.yml"
+					onChange={(event) => {
+						const files = event.currentTarget.files;
+						event.currentTarget.value = "";
+						void addFiles(files);
+					}}
+				/>
+				<input
+					ref={cameraInputRef}
+					type="file"
+					accept="image/*"
+					capture="environment"
+					hidden
+					onChange={(event) => {
+						const files = event.currentTarget.files;
+						event.currentTarget.value = "";
+						void addFiles(files);
+					}}
+				/>
+				{attachments.length > 0 && (
+					<div className={styles.attachments} aria-label="Attachments">
+						{attachments.map((attachment) => (
+							<div
+								key={attachment.id}
+								className={styles.attachment}
+								title={`${attachment.name} · ${formatBytes(attachment.size)}`}
+							>
+								{isImageAttachment(attachment) ? (
+									<img className={styles.attachmentThumb} src={attachment.dataUrl} alt={attachment.name} />
+								) : (
+									<span className={styles.attachmentExt} aria-hidden="true">
+										{extensionOf(attachment.name)}
+									</span>
+								)}
+								<span className={styles.attachmentInfo}>
+									<span className={styles.attachmentName}>{attachment.name}</span>
+									<span className={styles.attachmentSize}>{formatBytes(attachment.size)}</span>
+								</span>
+								<button
+									type="button"
+									className={styles.attachmentRemove}
+									title="Remove attachment"
+									aria-label={`Remove ${attachment.name}`}
+									onClick={() => removeAttachment(attachment.id)}
+								>
+									✕
+								</button>
+							</div>
+						))}
+					</div>
+				)}
 				<textarea
 					ref={inputRef}
 					className={styles.input}
@@ -256,6 +433,7 @@ export function PromptComposer({
 					}
 					value={text}
 					rows={3}
+					onPaste={handlePaste}
 					onChange={(e) => {
 						setText(e.target.value);
 						setDismissed(false);
@@ -337,13 +515,29 @@ export function PromptComposer({
 							...agents.map((a) => ({ value: a.name, label: a.name })),
 						]}
 					/>
+					<button
+						type="button"
+						className="btn btn-ghost"
+						onClick={() => fileInputRef.current?.click()}
+						title="Attach files, images, or PDFs"
+					>
+						Attach
+					</button>
+					<button
+						type="button"
+						className={`btn btn-ghost ${styles.cameraButton}`}
+						onClick={() => cameraInputRef.current?.click()}
+						title="Take a photo"
+					>
+						Camera
+					</button>
 					<span className="spacer" />
 					{busy ? (
 						<>
 							<button
 								type="button"
 								className="btn"
-								disabled={!text.trim()}
+								disabled={!hasInput}
 								onClick={queueMessage}
 								title="Run after the current turn finishes"
 							>
@@ -352,7 +546,7 @@ export function PromptComposer({
 							<button
 								type="button"
 								className="btn btn-primary"
-								disabled={!text.trim() || pendingIsCommand}
+								disabled={!hasInput || pendingIsCommand}
 								onClick={() => void steer()}
 								title={pendingIsCommand ? "Commands can only be queued" : "Send into the running turn now"}
 							>
@@ -366,7 +560,7 @@ export function PromptComposer({
 						<button
 							type="button"
 							className="btn btn-primary"
-							disabled={!text.trim() || sending}
+							disabled={!hasInput || sending}
 							onClick={() => void submit()}
 						>
 							Send
