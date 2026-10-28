@@ -20,6 +20,7 @@ import { run as runDropdown } from "./dropdown.test.mjs";
 import { run as runModel } from "./model.test.mjs";
 import { run as runQueue } from "./queue.test.mjs";
 import { run as runFork } from "./fork.test.mjs";
+import { run as runAttachments } from "./attachments.test.mjs";
 
 const withModel = process.argv.includes("--with-model");
 
@@ -52,6 +53,7 @@ if (!(await runSuite("structural", runStructural))) failures.push("structural");
 if (!(await runSuite("lifecycle", runLifecycle))) failures.push("lifecycle");
 if (!(await runSuite("subagent", runSubagent))) failures.push("subagent");
 if (!(await runSuite("session-refresh", runSessionRefresh))) failures.push("session-refresh");
+if (!(await runSuite("attachments", runAttachments))) failures.push("attachments");
 await runBench();
 if (boardsOk) {
 	if (!(await runSuite("boards", runBoards))) failures.push("boards");

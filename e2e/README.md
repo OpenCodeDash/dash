@@ -15,6 +15,7 @@ uses Node 24's built-in `fetch` and `WebSocket`.
 | `bench.test.mjs` | first-render, SSE connect, session-switch, modal-open timings |
 | `model.test.mjs` | real streaming, error-state, permission + question prompts (slow) |
 | `fork.test.mjs` | fork a session from a message, revert + restore, revert dock (slow) |
+| `attachments.test.mjs` | attach picker + mobile camera input, drop previews/remove, sent file parts, inline transcript image |
 | `run.mjs` | orchestrator |
 
 ## Prerequisites
